@@ -13,7 +13,6 @@ class FeatureEngineer:
     
     def __init__(self):
         self.encoding_maps = {}
-        self.historical_stats = {}  # Guardar estadísticas históricas para test
         
     def create_temporal_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Crea features temporales a partir de fechas"""
@@ -41,99 +40,41 @@ class FeatureEngineer:
         
         return df
     
-    def create_aggregated_features(self, df: pd.DataFrame, is_train: bool = True) -> pd.DataFrame:
-        """Crea features agregadas usando SOLO datos históricos (sin data leakage)"""
+    def create_aggregated_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Crea features agregadas por grupo"""
         df = df.copy()
         
-        # Inicializar columnas
-        df['family_mean_production_hist'] = np.nan
-        df['family_std_production_hist'] = np.nan
-        df['family_median_production_hist'] = np.nan
-        df['category_mean_production_hist'] = np.nan
-        df['category_median_production_hist'] = np.nan
-        df['stores_mean_production_hist'] = np.nan
+        # Agregar features por familia de producto
+        if 'family' in df.columns and TARGET in df.columns:
+            family_stats = df.groupby('family')[TARGET].agg([
+                ('family_mean_production', 'mean'),
+                ('family_std_production', 'std'),
+                ('family_median_production', 'median')
+            ]).reset_index()
+            df = df.merge(family_stats, on='family', how='left')
         
-        if not is_train or TARGET not in df.columns or 'id_season' not in df.columns:
-            # Para test, usar estadísticas guardadas
-            if self.historical_stats:
-                for col, stats_dict in self.historical_stats.items():
-                    if col in df.columns:
-                        df[f'{col}_mean_production_hist'] = df[col].map(stats_dict.get('mean', {}))
-                        if 'std' in stats_dict:
-                            df[f'{col}_std_production_hist'] = df[col].map(stats_dict['std'])
-                        if 'median' in stats_dict:
-                            df[f'{col}_median_production_hist'] = df[col].map(stats_dict['median'])
-            
-            # Rellenar NaN con medianas globales
-            for col in df.columns:
-                if '_hist' in col and df[col].isna().any():
-                    df[col].fillna(df[col].median(), inplace=True)
-            
-            return df
+        # Agregar features por categoría
+        if 'category' in df.columns and TARGET in df.columns:
+            category_stats = df.groupby('category')[TARGET].agg([
+                ('category_mean_production', 'mean'),
+                ('category_median_production', 'median')
+            ]).reset_index()
+            df = df.merge(category_stats, on='category', how='left')
         
-        # Para train: calcular estadísticas usando solo temporadas anteriores
-        seasons_sorted = sorted(df['id_season'].unique())
+        # Features por número de tiendas
+        if 'num_stores' in df.columns and TARGET in df.columns:
+            stores_stats = df.groupby('num_stores')[TARGET].agg([
+                ('stores_mean_production', 'mean')
+            ]).reset_index()
+            df = df.merge(stores_stats, on='num_stores', how='left')
         
-        # Para cada temporada, calcular stats de temporadas ANTERIORES
-        for i, season in enumerate(seasons_sorted):
-            # Máscara de la temporada actual
-            season_mask = df['id_season'] == season
-            
-            if i == 0:
-                # Primera temporada: usar valores globales (fallback)
-                continue
-            
-            # Datos históricos (solo temporadas anteriores)
-            hist_data = df[df['id_season'].isin(seasons_sorted[:i])]
-            
-            if len(hist_data) == 0:
-                continue
-            
-            # --- Features por familia ---
-            if 'family' in df.columns:
-                family_stats = hist_data.groupby('family')[TARGET].agg(['mean', 'std', 'median']).to_dict()
-                df.loc[season_mask, 'family_mean_production_hist'] = df.loc[season_mask, 'family'].map(family_stats['mean'])
-                df.loc[season_mask, 'family_std_production_hist'] = df.loc[season_mask, 'family'].map(family_stats['std'])
-                df.loc[season_mask, 'family_median_production_hist'] = df.loc[season_mask, 'family'].map(family_stats['median'])
-            
-            # --- Features por categoría ---
-            if 'category' in df.columns:
-                category_stats = hist_data.groupby('category')[TARGET].agg(['mean', 'median']).to_dict()
-                df.loc[season_mask, 'category_mean_production_hist'] = df.loc[season_mask, 'category'].map(category_stats['mean'])
-                df.loc[season_mask, 'category_median_production_hist'] = df.loc[season_mask, 'category'].map(category_stats['median'])
-            
-            # --- Features por número de tiendas ---
-            if 'num_stores' in df.columns:
-                stores_stats = hist_data.groupby('num_stores')[TARGET].mean().to_dict()
-                df.loc[season_mask, 'stores_mean_production_hist'] = df.loc[season_mask, 'num_stores'].map(stores_stats)
-        
-        # Guardar estadísticas de TODAS las temporadas para aplicar al test
-        if is_train:
-            all_data = df.copy()
-            
-            if 'family' in all_data.columns:
-                self.historical_stats['family'] = {
-                    'mean': all_data.groupby('family')[TARGET].mean().to_dict(),
-                    'std': all_data.groupby('family')[TARGET].std().to_dict(),
-                    'median': all_data.groupby('family')[TARGET].median().to_dict()
-                }
-            
-            if 'category' in all_data.columns:
-                self.historical_stats['category'] = {
-                    'mean': all_data.groupby('category')[TARGET].mean().to_dict(),
-                    'median': all_data.groupby('category')[TARGET].median().to_dict()
-                }
-            
-            if 'num_stores' in all_data.columns:
-                self.historical_stats['num_stores'] = {
-                    'mean': all_data.groupby('num_stores')[TARGET].mean().to_dict()
-                }
-        
-        # Rellenar NaN con medianas de columnas
-        for col in ['family_mean_production_hist', 'family_std_production_hist', 'family_median_production_hist',
-                    'category_mean_production_hist', 'category_median_production_hist', 'stores_mean_production_hist']:
-            if col in df.columns:
-                df[col].fillna(df[col].median(), inplace=True)
+        # Features por temporada
+        if 'id_season' in df.columns and TARGET in df.columns:
+            season_stats = df.groupby('id_season')[TARGET].agg([
+                ('season_mean_production', 'mean'),
+                ('season_total_production', 'sum')
+            ]).reset_index()
+            df = df.merge(season_stats, on='id_season', how='left')
         
         return df
     
@@ -159,30 +100,18 @@ class FeatureEngineer:
         
         return df
     
-    def create_lag_features(self, df: pd.DataFrame, is_train: bool = True) -> pd.DataFrame:
-        """Crea features de lag basadas en productos similares (solo históricos)"""
+    def create_lag_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Crea features de lag basadas en productos similares"""
         df = df.copy()
         
-        # Inicializar columnas de lag
-        df['family_lag1_production'] = np.nan
-        df['family_lag2_production'] = np.nan
-        
-        if not is_train:
-            # Para test, no podemos calcular lags sin el target
-            # Rellenar con mediana de train (si se guardó)
-            return df
-        
         # Ordenar por familia y temporada
-        if 'family' in df.columns and 'id_season' in df.columns and TARGET in df.columns:
+        if 'family' in df.columns and 'id_season' in df.columns:
             df = df.sort_values(['family', 'id_season'])
             
-            # Lag de producción por familia (shift ya garantiza uso de datos anteriores)
-            df['family_lag1_production'] = df.groupby('family')[TARGET].shift(1)
-            df['family_lag2_production'] = df.groupby('family')[TARGET].shift(2)
-            
-            # Rellenar NaN con medianas
-            df['family_lag1_production'].fillna(df['family_lag1_production'].median(), inplace=True)
-            df['family_lag2_production'].fillna(df['family_lag2_production'].median(), inplace=True)
+            # Lag de producción por familia
+            if TARGET in df.columns:
+                df['family_lag1_production'] = df.groupby('family')[TARGET].shift(1)
+                df['family_lag2_production'] = df.groupby('family')[TARGET].shift(2)
         
         return df
     
@@ -250,9 +179,9 @@ class FeatureEngineer:
                      categorical_cols: List[str]) -> pd.DataFrame:
         """Aplica todas las transformaciones en datos de entrenamiento"""
         df = self.create_temporal_features(df)
-        df = self.create_aggregated_features(df, is_train=True)
+        df = self.create_aggregated_features(df)
         df = self.create_interaction_features(df)
-        df = self.create_lag_features(df, is_train=True)
+        df = self.create_lag_features(df)
         df = self.process_image_embeddings(df)
         df = self.encode_categorical_features(df, categorical_cols, is_train=True)
         
@@ -260,11 +189,9 @@ class FeatureEngineer:
     
     def transform(self, df: pd.DataFrame, 
                   categorical_cols: List[str]) -> pd.DataFrame:
-        """Aplica transformaciones en datos de test (sin data leakage)"""
+        """Aplica transformaciones en datos de test"""
         df = self.create_temporal_features(df)
-        df = self.create_aggregated_features(df, is_train=False)
         df = self.create_interaction_features(df)
-        df = self.create_lag_features(df, is_train=False)
         df = self.process_image_embeddings(df)
         df = self.encode_categorical_features(df, categorical_cols, is_train=False)
         
