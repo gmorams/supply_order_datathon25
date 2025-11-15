@@ -1,0 +1,155 @@
+
+============================================================
+🥭 MANGO - Predicción de Demanda (SIMPLE)
+============================================================
+📂 Cargando datos...
+   ✓ Train: (95339, 33)
+   ✓ Test: (2250, 33)
+
+🔧 Feature Engineering SIMPLE...
+   - Extrayendo RGB...
+   - Creando features temporales...
+   - Creando features de interacción...
+   - Procesando embeddings (method=statistical)...
+   - Aplicando one-hot encoding...
+   - Alineando columnas train/test...
+      ⚠️  Columnas solo en train: 52
+      ⚠️  Columnas solo en test: 12
+
+   ✅ Features totales: 323
+   ✅ Train shape: (95339, 328)
+   ✅ Test shape: (2250, 325)
+
+🤖 Preparando datos para XGBoost...
+   ✓ X shape: (95339, 320)
+   ✓ y shape: (95339,)
+   ✓ X_test shape: (2250, 320)
+
+📊 Validación Cruzada (5-Fold)...
+
+==================================================
+Fold 1/5
+==================================================
+[0]	validation_0-rmse:32758.27452
+[100]	validation_0-rmse:6528.52679
+[200]	validation_0-rmse:5391.28367
+[300]	validation_0-rmse:4812.81933
+[400]	validation_0-rmse:4330.96787
+[499]	validation_0-rmse:3944.79727
+
+Fold 1 - Custom Score: 89.72
+Fold 1 - VAR: 0.9109
+Fold 1 - RMSE: 3944.7892
+
+==================================================
+Fold 2/5
+==================================================
+[0]	validation_0-rmse:33626.10665
+[100]	validation_0-rmse:6561.72754
+[200]	validation_0-rmse:5380.27448
+[300]	validation_0-rmse:4755.69629
+[400]	validation_0-rmse:4278.13733
+[499]	validation_0-rmse:3908.78223
+
+Fold 2 - Custom Score: 89.79
+Fold 2 - VAR: 0.9117
+Fold 2 - RMSE: 3908.7776
+
+==================================================
+Fold 3/5
+==================================================
+[0]	validation_0-rmse:33547.45718
+[100]	validation_0-rmse:6360.50075
+[200]	validation_0-rmse:5265.23431
+[300]	validation_0-rmse:4690.82897
+[400]	validation_0-rmse:4250.75648
+[499]	validation_0-rmse:3901.54794
+
+Fold 3 - Custom Score: 89.65
+Fold 3 - VAR: 0.9125
+Fold 3 - RMSE: 3901.5323
+
+==================================================
+Fold 4/5
+==================================================
+[0]	validation_0-rmse:33139.52924
+[100]	validation_0-rmse:6596.51852
+[200]	validation_0-rmse:5465.81262
+[300]	validation_0-rmse:4800.85020
+[400]	validation_0-rmse:4345.64164
+[499]	validation_0-rmse:3984.46737
+
+Fold 4 - Custom Score: 89.62
+Fold 4 - VAR: 0.9111
+Fold 4 - RMSE: 3984.4498
+
+==================================================
+Fold 5/5
+==================================================
+[0]	validation_0-rmse:33192.05084
+[100]	validation_0-rmse:6562.53414
+[200]	validation_0-rmse:5428.06038
+[300]	validation_0-rmse:4848.76944
+[400]	validation_0-rmse:4387.63409
+[499]	validation_0-rmse:3980.16286
+
+Fold 5 - Custom Score: 89.65
+Fold 5 - VAR: 0.9129
+Fold 5 - RMSE: 3980.1533
+
+==================================================
+RESULTADOS DE VALIDACIÓN CRUZADA
+==================================================
+custom_score: 89.6847 (+/- 0.0610)
+var: 0.9118 (+/- 0.0008)
+rmse: 3943.9404 (+/- 34.6063)
+mae: 2732.2683 (+/- 19.5921)
+r2: 0.9871 (+/- 0.0004)
+
+🎯 Entrenamiento final en todos los datos...
+
+📈 Top 20 Features más importantes:
+   total_exposure: 4.64e+11
+   color_name_BLANCO: 1.43e+11
+   fabric_WOVEN: 8.76e+10
+   total_capacity: 7.48e+10
+   aggregated_family_Jeans: 3.73e+10
+   R: 3.72e+10
+   is_long_lifecycle: 3.26e+10
+   G: 2.91e+10
+   aggregated_family_T-shirts: 2.88e+10
+   moment_TIME OFF: 2.88e+10
+   price_per_size: 2.84e+10
+   family_Jeans: 2.77e+10
+   archetype_Casual Chic: 2.51e+10
+   num_stores: 2.42e+10
+   fabric_JEANS: 2.26e+10
+   launch_late: 2.20e+10
+   sleeve_length_type_Fine Strap: 2.19e+10
+   aggregated_family_Tops: 2.02e+10
+   weeks_to_sell: 1.92e+10
+   emb_min: 1.90e+10
+
+🔮 Generando predicciones...
+
+   📊 Estadísticas de predicciones:
+      - Media: 26039.24
+      - Mediana: 17733.72
+      - Min: 0.00
+      - Max: 254919.72
+      - Std: 29809.20
+
+   ✅ Submission guardado en: submissions/submission_simple_20251115_163927.csv
+   ✅ Modelo guardado en: models/xgboost_simple_20251115_163927.pkl
+
+============================================================
+✨ ¡Proceso completado exitosamente!
+============================================================
+
+📋 Resumen de resultados:
+   - Custom Score (CV): 89.68 ± 0.06
+   - VAR (CV): 0.9118 ± 0.0008
+   - RMSE (CV): 3943.94 ± 34.61
+
+🎯 Archivo para subir a Kaggle: submissions/submission_simple_20251115_163927.csv
+============================================================

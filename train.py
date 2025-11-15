@@ -49,10 +49,30 @@ def prepare_features(train_df, test_df, optimize: bool = False):
     print("   - Aplicando transformaciones a test...")
     test_processed = fe.transform(test_df, config.CATEGORICAL_FEATURES)
     
-    # NOTA IMPORTANTE: No agregamos weekly_sales/weekly_demand por ID porque eso causaría
-    # data leakage. En su lugar, usamos las features agregadas históricas calculadas
-    # correctamente en FeatureEngineer.
-    print("   - Features agregadas históricas ya aplicadas por FeatureEngineer...")
+    # Agregar datos de weekly para crear features agregadas
+    # Nota: El dataset tiene weekly_sales y weekly_demand que necesitamos agregar
+    print("   - Agregando datos por producto...")
+    
+    # Identificar columnas disponibles
+    available_cols = train_processed.columns.tolist()
+    
+    # Agregar ventas/demanda semanales por producto si existen
+    if 'weekly_sales' in train_processed.columns and 'ID' in train_processed.columns:
+        weekly_agg = train_processed.groupby('ID').agg({
+            'weekly_sales': ['sum', 'mean', 'max', 'std'],
+            'weekly_demand': ['sum', 'mean', 'max', 'std']
+        }).reset_index()
+        
+        # Aplanar nombres de columnas
+        weekly_agg.columns = ['ID'] + [f'{col[0]}_{col[1]}' for col in weekly_agg.columns[1:]]
+        
+        # Merge con train
+        train_processed = train_processed.merge(weekly_agg, on='ID', how='left')
+        
+        # Para test, usar estadísticas globales
+        for col in weekly_agg.columns:
+            if col != 'ID' and col not in test_processed.columns:
+                test_processed[col] = train_processed[col].median()
     
     # Seleccionar features para el modelo
     # Excluir columnas que no deben usarse
