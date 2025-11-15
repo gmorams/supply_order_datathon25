@@ -1,315 +1,201 @@
-# 🥭 Mango - Supply Order Datathon 2025
+# Mango Datathon 2025 - Predicción de Demanda
 
-Solución para el desafío de predicción de demanda de Mango usando **XGBoost**.
+Modelo XGBoost para predecir la cantidad de producción de prendas que Mango debe ordenar para la próxima temporada.
 
-## 📋 Descripción del Desafío
-
-El objetivo es predecir la cantidad óptima de producción para cada producto de la nueva temporada de Mango. Este es un problema complejo que involucra:
-
-- 📊 Predicción de ventas 9 meses en el futuro
-- 🆕 Productos que aún no existen
-- ⏱️ Series de tiempo cortas (16 semanas)
-- 📈 Identificación de tendencias emergentes
-
-### Métrica de Evaluación
-
-El modelo se evalúa usando **VAR (Ventas Antes de Rebajas)**:
-
-```
-VAR = ventas a precio completo / producción
-```
-
-La métrica personalizada penaliza más las **ventas perdidas** que el exceso de stock, reflejando el problema real del negocio.
-
-## 🎯 Características del Proyecto
-
-### ✨ Arquitectura del Modelo
-
-- **Algoritmo principal**: XGBoost (Gradient Boosting)
-- **Optimización de hiperparámetros**: Optuna
-- **Validación**: K-Fold Cross-Validation (5 folds)
-- **Feature Engineering**: Más de 50+ features derivadas
-
-### 🔧 Features Implementadas
-
-1. **Features Temporales**:
-   - Mes, trimestre, semana del año
-   - Tipo de temporada (Primavera-Verano / Otoño-Invierno)
-   - Duración del ciclo de vida
-
-2. **Features Agregadas**:
-   - Estadísticas por familia de producto
-   - Estadísticas por categoría
-   - Estadísticas por número de tiendas
-   - Estadísticas por temporada
-
-3. **Features de Interacción**:
-   - Capacidad total (tiendas × tamaños)
-   - Potencial de ingresos (tiendas × precio)
-   - Exposición total (semanas × tiendas)
-
-4. **Features de Embeddings**:
-   - Estadísticas de embeddings de imagen
-   - Similitud entre productos
-
-5. **Features de Lag**:
-   - Producción de temporadas anteriores por familia
-   - Tendencias temporales
-
-## 🚀 Instalación
-
-### Requisitos Previos
-
-- Python 3.8+
-- pip o conda
-
-### Instalación de Dependencias
-
-```bash
-# Clonar el repositorio
-git clone https://github.com/gmorams/supply_order_datathon25.git
-cd supply_order_datathon25
-
-# Instalar dependencias
-pip install -r requirements.txt
-```
-
-## 📁 Estructura del Proyecto
+## 📋 Estructura del Proyecto
 
 ```
 supply_order_datathon25/
-├── data/                      # Datos (no incluidos en el repo)
-│   ├── train.csv
-│   ├── test.csv
-│   └── sample_submission.csv
-├── models/                    # Modelos entrenados
-├── notebooks/                 # Notebooks de análisis
-│   └── 01_exploratory_analysis.ipynb
-├── src/                       # Código fuente
-│   ├── feature_engineering.py
-│   └── model.py
-├── submissions/               # Archivos de submission
-├── config.py                  # Configuración del proyecto
-├── train.py                   # Script principal de entrenamiento
-├── requirements.txt           # Dependencias
-└── README.md                  # Este archivo
+├── data/
+│   ├── train.csv              # Datos de entrenamiento
+│   ├── test.csv               # Datos de test (sin labels)
+│   └── sample_submission.csv  # Formato de submission
+├── src/
+│   ├── feature_engineering.py # Creación de features
+│   ├── model.py               # Modelo XGBoost
+│   └── utils.py               # Funciones auxiliares
+├── models/                    # Modelos entrenados (generado)
+├── submissions/               # Submissions generadas (generado)
+├── config.py                  # Configuración global
+├── train_with_test.py         # Entrenamiento CON validación ⭐
+├── train.py                   # Entrenamiento completo
+├── predict.py                 # Script de predicción
+└── requirements.txt           # Dependencias
 ```
 
-## 💻 Uso
+## 🚀 Inicio Rápido
 
-### 1. Preparar los Datos
+### 1. Configurar entorno
 
-Coloca los archivos del datathon en la carpeta `data/`:
+```bash
+# Usar Python 3.11
+pyenv shell 3.11.9
+
+# Crear entorno virtual
+python3 -m venv venv
+
+# Activar entorno
+source venv/bin/activate
+
+# Instalar dependencias
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2. Colocar los datos
+
+Coloca los archivos CSV en la carpeta `data/`:
 - `train.csv`
 - `test.csv`
 - `sample_submission.csv`
 
-### 2. Análisis Exploratorio (Opcional)
+### 3. Entrenar el modelo
+
+**OPCIÓN A - Con validación (RECOMENDADO para empezar):**
 
 ```bash
-jupyter notebook notebooks/01_exploratory_analysis.ipynb
+python train_with_test.py
 ```
 
-### 3. Entrenar el Modelo
+El script:
+- Separa 20% del train como test de validación
+- Entrena en el 80% restante
+- Evalúa en el 20% con labels conocidos
+- **Te dice qué score esperar en Kaggle**
+- Guarda el modelo en `models/`
 
-#### Entrenamiento Básico
+⏱️ **Tiempo estimado:** 2-3 minutos
+
+**OPCIÓN B - Entrenamiento completo (para submission final):**
 
 ```bash
 python train.py
 ```
 
-#### Entrenamiento con Optimización de Hiperparámetros
+El script:
+- Usa 100% del train para entrenar
+- Entrena con cross-validation
+- Guarda el modelo en `models/`
+
+⏱️ **Tiempo estimado:** 3-5 minutos
+
+### 4. Generar predicción
 
 ```bash
-python train.py --optimize
+python predict.py
 ```
 
-Este proceso:
-1. ✅ Carga y preprocesa los datos
-2. ✅ Crea features adicionales
-3. ✅ Entrena el modelo con validación cruzada
-4. ✅ Genera predicciones
-5. ✅ Crea archivo de submission
+El script:
+- Carga el modelo entrenado
+- Genera predicciones para el test set
+- Guarda la submission en `submissions/submission_YYYYMMDD_HHMMSS.csv`
 
-### 4. Resultados
+⏱️ **Tiempo estimado:** 30 segundos
 
-Los archivos generados se guardan en:
-- **Modelo**: `models/xgboost_model.json`
-- **Feature Importance**: `models/feature_importance.csv`
-- **Submission**: `submissions/submission_YYYYMMDD_HHMMSS.csv`
+## 📊 ¿Qué hace el modelo?
 
-## 📊 Resultados Esperados
+### Preprocesamiento SIMPLE:
 
-El modelo está diseñado para:
+1. **Rellena valores nulos** (mediana para números, 'missing' para texto)
+2. **Encoding de categóricas** (convierte texto a números)
+3. **¡Nada más!** Sin features complejas
 
-- ✅ Maximizar el VAR (Ventas Antes de Rebajas)
-- ✅ Minimizar ventas perdidas
-- ✅ Reducir exceso de stock
-- ✅ Adaptarse a diferentes familias de productos
-- ✅ Capturar tendencias estacionales
+### Modelo:
 
-### Métricas de Evaluación
+- **Algoritmo:** XGBoost (Gradient Boosting)
+- **Validación:** 5-Fold Cross-Validation
+- **Métrica:** Custom score (penaliza más ventas perdidas que exceso de stock)
 
-Durante la validación cruzada, el modelo reporta:
+> 💡 **Filosofía:** Empezar simple. Si funciona, ya habrá tiempo de agregar complejidad.
 
-| Métrica | Descripción |
-|---------|-------------|
-| **Custom Score** | Score personalizado (0-100) que penaliza ventas perdidas |
-| **VAR** | Ventas a precio completo / producción |
-| **RMSE** | Root Mean Squared Error |
-| **MAE** | Mean Absolute Error |
-| **R²** | Coeficiente de determinación |
-| **Lost Sales** | Ventas perdidas promedio por producto |
-| **Excess Stock** | Exceso de stock promedio por producto |
+## 📝 Configuración
 
-## 🔬 Metodología
-
-### 1. Feature Engineering
+Edita `config.py` para ajustar:
 
 ```python
-from src.feature_engineering import FeatureEngineer
-
-fe = FeatureEngineer()
-train_processed = fe.fit_transform(train_df, categorical_features)
-test_processed = fe.transform(test_df, categorical_features)
-```
-
-### 2. Entrenamiento del Modelo
-
-```python
-from src.model import DemandPredictor
-
-predictor = DemandPredictor(params=xgboost_params)
-cv_results = predictor.cross_validate(X_train, y_train, n_splits=5)
-predictor.train(X_train, y_train)
-```
-
-### 3. Generación de Predicciones
-
-```python
-predictions = predictor.predict(X_test)
-submission = pd.DataFrame({
-    'ID': test_ids,
-    'Production': predictions
-})
-```
-
-## 🎛️ Configuración
-
-Los parámetros del modelo se pueden ajustar en `config.py`:
-
-```python
+# Hiperparámetros del modelo
 XGBOOST_PARAMS = {
-    'objective': 'reg:squarederror',
-    'max_depth': 8,
-    'learning_rate': 0.05,
-    'n_estimators': 1000,
-    'subsample': 0.8,
-    'colsample_bytree': 0.8,
-    # ... más parámetros
+    'max_depth': 6,
+    'learning_rate': 0.1,
+    'n_estimators': 100,
+    # ...
 }
+
+# Features categóricas
+CATEGORICAL_FEATURES = [
+    'family', 'category', 'fabric', 
+    'color_name', 'archetype', # ...
+]
 ```
 
-## 🔄 Optimización de Hiperparámetros
+## 🎯 Resultados
 
-El proyecto incluye optimización automática con Optuna:
+El modelo genera:
 
-```python
-from src.model import optimize_hyperparameters
+1. **Modelo entrenado:** `models/xgboost_model.json`
+2. **Feature importance:** `models/feature_importance.csv`
+3. **Metadata:** `models/model_metadata.json`
+4. **Submission:** `submissions/submission_YYYYMMDD_HHMMSS.csv`
 
-best_params = optimize_hyperparameters(
-    X_train, y_train,
-    n_trials=50,
-    timeout=3600
-)
-```
+## 📈 Métricas de Evaluación
 
-## 📈 Mejoras Potenciales
+Durante el entrenamiento verás:
 
-### Corto Plazo
-- [ ] Ensemble con LightGBM y CatBoost
-- [ ] Feature selection automático
-- [ ] Calibración de predicciones
+- **Score CV:** Score promedio en cross-validation (0-100)
+- **VAR:** Ratio de ventas / producción
+- **MAE, RMSE, R²:** Métricas estándar de regresión
 
-### Medio Plazo
-- [ ] Modelos específicos por familia de producto
-- [ ] Transfer learning con embeddings de imagen
-- [ ] Features de similitud entre productos
+## 🔧 Troubleshooting
 
-### Largo Plazo
-- [ ] Modelos de series de tiempo (LSTM, Transformer)
-- [ ] Incorporar datos externos (tendencias, clima)
-- [ ] Sistema de producción con reentrenamiento automático
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Para contribuir:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📝 Notas Técnicas
-
-### Manejo de Valores Faltantes
-
-- Features numéricas: Imputación con mediana
-- Features categóricas: Categoría 'unknown'
-- Embeddings: Imputación con 0
-
-### Encoding de Variables Categóricas
-
-- Target encoding para features con alta cardinalidad
-- Frequency encoding como alternativa
-- Label encoding para XGBoost (maneja categorías nativamente)
-
-### Validación
-
-- K-Fold Cross-Validation estratificado
-- Split temporal para validar predicciones futuras
-- Validación en subset de test durante el datathon
-
-## 🐛 Solución de Problemas
-
-### Error: "train.csv not found"
-Asegúrate de que los archivos de datos están en la carpeta `data/`.
-
-### Error: Memory issues
-Reduce el número de features o usa submuestreo:
-```python
-train_df = train_df.sample(frac=0.8, random_state=42)
-```
-
-### Predicciones muy altas/bajas
-Ajusta los parámetros del modelo en `config.py` o activa la optimización:
+### Error: "ModuleNotFoundError"
 ```bash
-python train.py --optimize
+# Asegúrate de estar en el entorno virtual
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## 📚 Referencias
+### Error: "FileNotFoundError"
+```bash
+# Verifica que los archivos CSV estén en data/
+ls data/
+```
 
-- [XGBoost Documentation](https://xgboost.readthedocs.io/)
-- [Optuna Documentation](https://optuna.readthedocs.io/)
-- [Scikit-learn Documentation](https://scikit-learn.org/)
+### Error: "Python version"
+```bash
+# Usa Python 3.11
+pyenv install 3.11.9
+pyenv shell 3.11.9
+```
 
-## 👥 Autores
+## 📦 Dependencias Principales
 
-- **Tu Nombre** - *Desarrollador Principal*
+- **pandas** 2.1.4 - Manipulación de datos
+- **numpy** 1.26.3 - Cálculos numéricos
+- **scikit-learn** 1.4.0 - Preprocesamiento y métricas
+- **xgboost** 2.0.3 - Modelo de predicción
+- **matplotlib** 3.8.2 - Visualizaciones
+- **seaborn** 0.13.1 - Visualizaciones estadísticas
+
+## 💡 Cómo Mejorar el Score (en orden de prioridad)
+
+1. **Ajusta hiperparámetros** en `config.py` (max_depth, learning_rate, etc.)
+2. **Añade features simples** en `src/feature_engineering.py` (ej: precio * num_stores)
+3. **Prueba diferentes encodings** para categóricas
+4. **Revisa feature importance** (`models/feature_importance.csv`)
+5. **Si ya funciona bien:** Entonces sí, añade features complejas
+
+## 📚 Información del Datathon
+
+**Objetivo:** Predecir la cantidad de producción óptima para cada prenda
+
+**Métrica de Kaggle:** Score personalizado (0-100) que penaliza más las ventas perdidas que el exceso de stock
+
+**Penalización:** Perder ventas (underproduce) es 2x peor que tener exceso de stock (overproduce)
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
-
-## 🙏 Agradecimientos
-
-- Mango por organizar este desafío
-- La comunidad de data science por las herramientas open-source
-- Todos los participantes del datathon
+MIT License - Ver archivo LICENSE
 
 ---
 
-**¡Buena suerte en el datathon! 🚀**
-
-Si tienes preguntas o sugerencias, no dudes en abrir un issue en el repositorio.
+**¿Preguntas?** Consulta el código fuente, está documentado 📖

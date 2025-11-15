@@ -86,9 +86,7 @@ EXCLUDE_COLS = [
     'ID',
     'weekly_sales',
     'weekly_demand',
-    'Production',
-    'num_week_iso',
-    'color_rgb'  # Usaremos color_name en su lugar
+    'Production'
 ]
 
 # Target variable

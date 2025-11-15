@@ -1,0 +1,97 @@
+═══════════════════════════════════════════════════════════════
+MANGO DATATHON - COMANDOS RÁPIDOS
+═══════════════════════════════════════════════════════════════
+
+1️⃣  CONFIGURAR ENTORNO (solo la primera vez)
+───────────────────────────────────────────────────────────────
+pyenv shell 3.11.9
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+
+2️⃣  ENTRENAR MODELO
+───────────────────────────────────────────────────────────────
+
+OPCIÓN A - CON VALIDACIÓN (recomendado para empezar):
+   source venv/bin/activate
+   python train_with_test.py
+   
+   → Separa 20% del train para validar
+   → Te dice qué score esperar en Kaggle
+   → Resultado: Modelo + score de validación
+
+OPCIÓN B - ENTRENAMIENTO COMPLETO (para submission final):
+   source venv/bin/activate
+   python train.py
+   
+   → Usa 100% del train
+   → Resultado: Modelo guardado en models/
+
+
+3️⃣  GENERAR PREDICCIÓN
+───────────────────────────────────────────────────────────────
+source venv/bin/activate
+python predict.py
+
+Resultado: Submission en submissions/submission_YYYYMMDD_HHMMSS.csv
+
+
+═══════════════════════════════════════════════════════════════
+ARCHIVOS ESENCIALES
+═══════════════════════════════════════════════════════════════
+
+📁 CÓDIGO:
+  • config.py         → Configuración (hiperparámetros, paths)
+  • train.py          → Entrena el modelo
+  • predict.py        → Genera predicciones
+  • requirements.txt  → Dependencias Python
+
+📁 LÓGICA (src/):
+  • feature_engineering.py → Crea features automáticamente
+  • model.py               → Modelo XGBoost + cross-validation
+  • utils.py               → Funciones auxiliares
+
+📁 DATOS (data/):
+  • train.csv              → Datos de entrenamiento
+  • test.csv               → Datos para predicción
+  • sample_submission.csv  → Formato de ejemplo
+
+📁 RESULTADOS:
+  • models/      → Modelos entrenados
+  • submissions/ → Archivos para Kaggle
+
+
+═══════════════════════════════════════════════════════════════
+FLUJO DE TRABAJO
+═══════════════════════════════════════════════════════════════
+
+1. Activar entorno
+2. Ejecutar train.py
+3. Ejecutar predict.py
+4. Subir submission a Kaggle
+5. Ver score
+6. Ajustar hiperparámetros en config.py
+7. Repetir 2-6
+
+
+═══════════════════════════════════════════════════════════════
+TIPS
+═══════════════════════════════════════════════════════════════
+
+✅ Para ver el progreso mientras entrena:
+   Observa las métricas de cada fold en la consola
+
+✅ Para ajustar el modelo:
+   Edita XGBOOST_PARAMS en config.py
+
+✅ Para añadir features:
+   Edita src/feature_engineering.py
+
+✅ Si el modelo overfittea:
+   Reduce max_depth, aumenta min_child_weight
+
+
+═══════════════════════════════════════════════════════════════
+
