@@ -1,0 +1,360 @@
+============================================================
+🥭 MANGO - Modelo Mejorado (Anti-Overfitting)
+============================================================
+📂 Cargando datos...
+   ✓ Train: (95339, 33)
+   ✓ Test: (2250, 33)
+
+🔧 Ingeniería de features mejorada...
+
+🔧 Creando features avanzadas...
+   - Agregando por producto (ID)...
+   - Creando ratios...
+   ✓ Features avanzadas creadas
+   ⚠️  Completando 11 columnas faltantes en test...
+   ✓ Features: 66
+   ✓ X_train: (95339, 66)
+   ✓ X_test: (2250, 66)
+
+🤖 Entrenando modelo mejorado (anti-overfitting)...
+
+   📊 Validación cruzada con 5 folds...
+
+==================================================
+Fold 1/5
+==================================================
+[0]	train-rmse:33652.37199	val-rmse:34395.81102
+[50]	train-rmse:7863.00881	val-rmse:8072.51522
+[100]	train-rmse:2153.65471	val-rmse:2442.88916
+[150]	train-rmse:945.39142	val-rmse:1318.68071
+[200]	train-rmse:663.60795	val-rmse:1055.53672
+[250]	train-rmse:544.48358	val-rmse:950.26576
+[300]	train-rmse:485.75383	val-rmse:901.97796
+[350]	train-rmse:440.82695	val-rmse:868.83188
+[400]	train-rmse:405.17676	val-rmse:838.76422
+[450]	train-rmse:373.17510	val-rmse:816.29849
+[500]	train-rmse:346.95939	val-rmse:797.33558
+[550]	train-rmse:326.64995	val-rmse:779.74021
+[600]	train-rmse:309.57268	val-rmse:762.24716
+[650]	train-rmse:293.78801	val-rmse:748.21092
+[700]	train-rmse:279.08890	val-rmse:733.85192
+[750]	train-rmse:265.45298	val-rmse:724.21212
+[800]	train-rmse:254.99480	val-rmse:717.14853
+[850]	train-rmse:244.69880	val-rmse:708.73885
+[900]	train-rmse:234.12669	val-rmse:702.97262
+[950]	train-rmse:225.15227	val-rmse:697.42973
+[1000]	train-rmse:216.95104	val-rmse:693.21877
+[1050]	train-rmse:210.47357	val-rmse:689.07834
+[1100]	train-rmse:204.13326	val-rmse:682.99949
+[1150]	train-rmse:198.50454	val-rmse:677.98502
+[1200]	train-rmse:193.27517	val-rmse:674.85753
+[1250]	train-rmse:188.11710	val-rmse:671.93695
+[1300]	train-rmse:183.34994	val-rmse:668.94725
+[1350]	train-rmse:178.80517	val-rmse:665.27083
+[1400]	train-rmse:174.87686	val-rmse:663.07836
+[1450]	train-rmse:170.81756	val-rmse:661.11137
+[1500]	train-rmse:166.84038	val-rmse:658.73894
+[1550]	train-rmse:162.50483	val-rmse:656.04984
+[1600]	train-rmse:159.27955	val-rmse:653.94745
+[1650]	train-rmse:155.56780	val-rmse:651.84663
+[1700]	train-rmse:152.23781	val-rmse:649.58587
+[1750]	train-rmse:149.65651	val-rmse:648.32555
+[1800]	train-rmse:146.86863	val-rmse:647.18334
+[1850]	train-rmse:143.87916	val-rmse:645.93357
+[1900]	train-rmse:141.01183	val-rmse:644.44444
+[1950]	train-rmse:138.47951	val-rmse:643.03907
+[1999]	train-rmse:135.67772	val-rmse:641.76624
+
+Fold 1 - Custom Score: 99.68
+Fold 1 - VAR: 0.9955
+Fold 1 - RMSE: 641.7662
+
+==================================================
+Fold 2/5
+==================================================
+[0]	train-rmse:33910.96988	val-rmse:33329.09940
+[50]	train-rmse:7929.44271	val-rmse:7788.32645
+[100]	train-rmse:2182.07642	val-rmse:2198.03627
+[150]	train-rmse:957.23749	val-rmse:1088.87816
+[200]	train-rmse:671.92288	val-rmse:859.34397
+[250]	train-rmse:560.58249	val-rmse:770.97864
+[300]	train-rmse:504.09630	val-rmse:726.68034
+[350]	train-rmse:459.17249	val-rmse:693.39168
+[400]	train-rmse:430.37158	val-rmse:672.43060
+[450]	train-rmse:402.17131	val-rmse:651.36825
+[500]	train-rmse:378.99048	val-rmse:637.19528
+[550]	train-rmse:358.52755	val-rmse:625.25742
+[600]	train-rmse:342.29486	val-rmse:615.90335
+[650]	train-rmse:326.15862	val-rmse:606.00459
+[700]	train-rmse:311.51235	val-rmse:596.47267
+[750]	train-rmse:297.83900	val-rmse:588.30047
+[800]	train-rmse:286.52631	val-rmse:581.05188
+[850]	train-rmse:275.99596	val-rmse:575.57128
+[900]	train-rmse:268.82899	val-rmse:570.56599
+[950]	train-rmse:260.35832	val-rmse:565.57986
+[1000]	train-rmse:252.96666	val-rmse:561.71446
+[1050]	train-rmse:246.32263	val-rmse:557.87040
+[1100]	train-rmse:239.66375	val-rmse:553.72830
+[1150]	train-rmse:233.10109	val-rmse:550.06349
+[1200]	train-rmse:227.44315	val-rmse:546.28001
+[1250]	train-rmse:222.00818	val-rmse:542.71270
+[1300]	train-rmse:217.08816	val-rmse:539.84862
+[1350]	train-rmse:212.05117	val-rmse:537.11693
+[1400]	train-rmse:207.25231	val-rmse:534.70738
+[1450]	train-rmse:202.59168	val-rmse:532.05759
+[1500]	train-rmse:198.69137	val-rmse:529.54214
+[1550]	train-rmse:195.01898	val-rmse:527.70723
+[1600]	train-rmse:191.29778	val-rmse:525.89012
+[1650]	train-rmse:187.47279	val-rmse:523.57779
+[1700]	train-rmse:184.00068	val-rmse:521.86011
+[1750]	train-rmse:180.45903	val-rmse:520.41183
+[1800]	train-rmse:177.36457	val-rmse:518.93053
+[1850]	train-rmse:174.25882	val-rmse:517.40317
+[1900]	train-rmse:171.62134	val-rmse:516.19836
+[1950]	train-rmse:169.04050	val-rmse:514.71114
+[1999]	train-rmse:166.67108	val-rmse:514.00732
+
+Fold 2 - Custom Score: 99.66
+Fold 2 - VAR: 0.9950
+Fold 2 - RMSE: 514.0033
+
+==================================================
+Fold 3/5
+==================================================
+[0]	train-rmse:33829.21120	val-rmse:33685.86387
+[50]	train-rmse:7914.68325	val-rmse:7913.35064
+[100]	train-rmse:2178.40574	val-rmse:2206.77759
+[150]	train-rmse:958.04759	val-rmse:1090.25847
+[200]	train-rmse:672.73679	val-rmse:875.17207
+[250]	train-rmse:561.03464	val-rmse:805.89809
+[300]	train-rmse:500.56631	val-rmse:769.71578
+[350]	train-rmse:458.92499	val-rmse:743.99680
+[400]	train-rmse:426.72687	val-rmse:726.33930
+[450]	train-rmse:397.97425	val-rmse:711.16985
+[500]	train-rmse:374.79616	val-rmse:696.65949
+[550]	train-rmse:354.13966	val-rmse:686.59997
+[600]	train-rmse:338.08478	val-rmse:676.04365
+[650]	train-rmse:322.43851	val-rmse:665.29969
+[700]	train-rmse:310.61977	val-rmse:659.23534
+[750]	train-rmse:298.05159	val-rmse:652.05540
+[800]	train-rmse:287.61727	val-rmse:646.45493
+[850]	train-rmse:276.34421	val-rmse:639.30220
+[900]	train-rmse:268.09491	val-rmse:634.36420
+[950]	train-rmse:259.40100	val-rmse:625.24624
+[1000]	train-rmse:252.11713	val-rmse:620.64424
+[1050]	train-rmse:244.87920	val-rmse:615.39553
+[1100]	train-rmse:238.23076	val-rmse:610.95783
+[1150]	train-rmse:232.44000	val-rmse:607.36520
+[1200]	train-rmse:226.59677	val-rmse:602.74973
+[1250]	train-rmse:220.95045	val-rmse:599.01479
+[1300]	train-rmse:215.76795	val-rmse:596.25788
+[1350]	train-rmse:211.52547	val-rmse:593.39773
+[1400]	train-rmse:206.94288	val-rmse:591.91269
+[1450]	train-rmse:202.48386	val-rmse:589.52998
+[1500]	train-rmse:198.64986	val-rmse:586.75810
+[1550]	train-rmse:194.83578	val-rmse:584.58896
+[1600]	train-rmse:191.50368	val-rmse:583.09617
+[1650]	train-rmse:187.72779	val-rmse:581.80505
+[1700]	train-rmse:184.64160	val-rmse:579.78125
+[1750]	train-rmse:181.48687	val-rmse:577.66364
+[1800]	train-rmse:178.44840	val-rmse:576.99358
+[1850]	train-rmse:175.54841	val-rmse:575.98969
+[1900]	train-rmse:172.83034	val-rmse:574.83000
+[1950]	train-rmse:169.78141	val-rmse:573.19586
+[1999]	train-rmse:167.36861	val-rmse:571.44913
+
+Fold 3 - Custom Score: 99.65
+Fold 3 - VAR: 0.9950
+Fold 3 - RMSE: 571.4491
+
+==================================================
+Fold 4/5
+==================================================
+[0]	train-rmse:33707.09694	val-rmse:34169.42237
+[50]	train-rmse:7883.73448	val-rmse:8160.92781
+[100]	train-rmse:2174.22959	val-rmse:2362.59243
+[150]	train-rmse:968.90493	val-rmse:1143.65317
+[200]	train-rmse:691.50991	val-rmse:879.12520
+[250]	train-rmse:584.81264	val-rmse:790.34100
+[300]	train-rmse:533.27200	val-rmse:742.55584
+[350]	train-rmse:493.00179	val-rmse:711.56721
+[400]	train-rmse:462.06321	val-rmse:690.28768
+[450]	train-rmse:431.46073	val-rmse:672.53862
+[500]	train-rmse:409.29860	val-rmse:654.24509
+[550]	train-rmse:390.91180	val-rmse:640.57475
+[600]	train-rmse:374.28614	val-rmse:629.37770
+[650]	train-rmse:360.34102	val-rmse:613.95072
+[700]	train-rmse:345.71947	val-rmse:603.73432
+[750]	train-rmse:331.69884	val-rmse:595.99224
+[800]	train-rmse:319.53310	val-rmse:586.85385
+[850]	train-rmse:309.18930	val-rmse:581.39166
+[900]	train-rmse:299.83034	val-rmse:577.28275
+[950]	train-rmse:289.70760	val-rmse:570.35116
+[1000]	train-rmse:281.36393	val-rmse:565.44556
+[1050]	train-rmse:274.11563	val-rmse:559.00757
+[1100]	train-rmse:266.49669	val-rmse:555.30335
+[1150]	train-rmse:259.78715	val-rmse:552.80553
+[1200]	train-rmse:253.35105	val-rmse:548.61598
+[1250]	train-rmse:247.76981	val-rmse:546.86248
+[1300]	train-rmse:241.66764	val-rmse:541.72346
+[1350]	train-rmse:236.35094	val-rmse:537.43402
+[1400]	train-rmse:231.02942	val-rmse:532.90229
+[1450]	train-rmse:225.67410	val-rmse:531.52361
+[1500]	train-rmse:220.85263	val-rmse:530.44651
+[1550]	train-rmse:216.72718	val-rmse:527.77004
+[1600]	train-rmse:212.51384	val-rmse:524.91853
+[1650]	train-rmse:208.32909	val-rmse:521.85886
+[1700]	train-rmse:204.51725	val-rmse:519.92061
+[1750]	train-rmse:201.43720	val-rmse:518.70705
+[1800]	train-rmse:198.03851	val-rmse:517.53114
+[1850]	train-rmse:194.46358	val-rmse:513.72744
+[1900]	train-rmse:190.90446	val-rmse:511.44642
+[1950]	train-rmse:187.69653	val-rmse:511.03351
+[1999]	train-rmse:184.63512	val-rmse:508.74099
+
+Fold 4 - Custom Score: 99.64
+Fold 4 - VAR: 0.9947
+Fold 4 - RMSE: 508.7348
+
+==================================================
+Fold 5/5
+==================================================
+[0]	train-rmse:33895.43988	val-rmse:33407.57586
+[50]	train-rmse:7922.18270	val-rmse:7806.15130
+[100]	train-rmse:2176.61832	val-rmse:2185.91153
+[150]	train-rmse:973.64513	val-rmse:1050.78998
+[200]	train-rmse:695.23568	val-rmse:809.02783
+[250]	train-rmse:577.49189	val-rmse:711.32426
+[300]	train-rmse:520.25067	val-rmse:666.55217
+[350]	train-rmse:474.44784	val-rmse:628.67385
+[400]	train-rmse:437.18374	val-rmse:600.78458
+[450]	train-rmse:407.51067	val-rmse:578.09215
+[500]	train-rmse:385.32658	val-rmse:563.43189
+[550]	train-rmse:365.36866	val-rmse:549.39155
+[600]	train-rmse:346.56276	val-rmse:534.22966
+[650]	train-rmse:333.21496	val-rmse:524.12336
+[700]	train-rmse:319.57748	val-rmse:513.86128
+[750]	train-rmse:307.18864	val-rmse:506.34418
+[800]	train-rmse:294.44120	val-rmse:497.43676
+[850]	train-rmse:283.03057	val-rmse:489.68781
+[900]	train-rmse:273.95354	val-rmse:483.77636
+[950]	train-rmse:266.28049	val-rmse:479.46417
+[1000]	train-rmse:257.58786	val-rmse:472.88721
+[1050]	train-rmse:249.85956	val-rmse:468.85672
+[1100]	train-rmse:243.23253	val-rmse:464.07745
+[1150]	train-rmse:236.83723	val-rmse:460.28623
+[1200]	train-rmse:230.86731	val-rmse:456.17239
+[1250]	train-rmse:224.34384	val-rmse:451.95040
+[1300]	train-rmse:218.37420	val-rmse:447.50459
+[1350]	train-rmse:213.22548	val-rmse:443.94668
+[1400]	train-rmse:208.26884	val-rmse:440.99529
+[1450]	train-rmse:203.64647	val-rmse:437.21881
+[1500]	train-rmse:199.53157	val-rmse:434.34929
+[1550]	train-rmse:195.13361	val-rmse:431.20479
+[1600]	train-rmse:191.06302	val-rmse:429.19232
+[1650]	train-rmse:187.40543	val-rmse:427.12277
+[1700]	train-rmse:183.30400	val-rmse:424.90074
+[1750]	train-rmse:180.11935	val-rmse:423.00251
+[1800]	train-rmse:176.93711	val-rmse:421.48360
+[1850]	train-rmse:173.76014	val-rmse:419.48382
+[1900]	train-rmse:170.85632	val-rmse:417.76284
+[1950]	train-rmse:167.75524	val-rmse:416.02143
+[1999]	train-rmse:165.29787	val-rmse:414.62213
+
+Fold 5 - Custom Score: 99.66
+Fold 5 - VAR: 0.9945
+Fold 5 - RMSE: 414.6221
+
+==================================================
+RESULTADOS DE VALIDACIÓN CRUZADA
+==================================================
+custom_score: 99.6585 (+/- 0.0163)
+var: 0.9949 (+/- 0.0004)
+rmse: 530.1151 (+/- 75.1396)
+mae: 132.1284 (+/- 5.3374)
+r2: 0.9998 (+/- 0.0001)
+
+   🎯 Entrenamiento final...
+[0]	train-rmse:33797.67610
+[50]	train-rmse:7873.29140
+[100]	train-rmse:2153.64772
+[150]	train-rmse:956.03267
+[200]	train-rmse:673.63935
+[250]	train-rmse:563.43050
+[300]	train-rmse:507.77052
+[350]	train-rmse:457.74269
+[400]	train-rmse:422.58546
+[450]	train-rmse:392.69147
+[500]	train-rmse:370.21312
+[550]	train-rmse:351.59426
+[600]	train-rmse:335.35041
+[650]	train-rmse:319.91097
+[700]	train-rmse:306.75993
+[750]	train-rmse:294.62165
+[800]	train-rmse:283.90128
+[850]	train-rmse:273.72371
+[900]	train-rmse:265.13449
+[950]	train-rmse:257.65788
+[1000]	train-rmse:249.87875
+[1050]	train-rmse:243.47740
+[1100]	train-rmse:236.77728
+[1150]	train-rmse:230.77444
+[1200]	train-rmse:225.26540
+[1250]	train-rmse:220.14231
+[1300]	train-rmse:215.22346
+[1350]	train-rmse:210.56004
+[1400]	train-rmse:205.85252
+[1450]	train-rmse:201.34976
+[1500]	train-rmse:197.25493
+[1550]	train-rmse:193.10543
+[1600]	train-rmse:189.39373
+[1650]	train-rmse:185.64126
+[1700]	train-rmse:182.05721
+[1750]	train-rmse:178.86843
+[1800]	train-rmse:176.27166
+[1850]	train-rmse:173.53509
+[1900]	train-rmse:171.11578
+[1950]	train-rmse:168.60822
+[1999]	train-rmse:166.15122
+
+   📈 Top 15 Features:
+               feature   importance
+     weekly_demand_sum 7.855383e+10
+       Production_mean 7.647691e+10
+   avg_sales_per_store 3.541279e+10
+family_lag1_production 3.363110e+10
+stores_mean_production 1.989808e+10
+      weekly_sales_sum 1.397346e+10
+        total_capacity 1.052339e+10
+        total_exposure 9.934384e+09
+family_lag2_production 9.302225e+09
+        sales_per_week 8.621142e+09
+            num_stores 7.041006e+09
+    weekly_demand_mean 2.637650e+09
+             num_sizes 2.559493e+09
+       demand_per_week 1.911906e+09
+                 price 1.232937e+09
+
+🔮 Generando predicciones...
+
+🔧 Aplicando post-procesamiento (conservative)...
+
+   📊 Estadísticas:
+      - Media: 17575.04
+      - Mediana: 17549.10
+      - Min: 16313.80
+      - Max: 21434.86
+
+   ✅ Submission guardado: /Users/hugonienhausen/Desktop/datathon/supply_order_datathon25/submissions/submission_improved_20251115_172806.csv
+
+============================================================
+✨ Proceso completado!
+============================================================
+
+📋 Resumen:
+   - Score CV: 99.66 ± 0.02
+   - VAR CV: 0.9949
+   - RMSE CV: 530.12
+
+🎯 Sube el nuevo archivo a Kaggle!
+============================================================
