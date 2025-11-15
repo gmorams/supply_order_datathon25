@@ -23,122 +23,138 @@ class FeatureEngineer:
             df['phase_in'] = pd.to_datetime(df['phase_in'], errors='coerce')
             df['phase_out'] = pd.to_datetime(df['phase_out'], errors='coerce')
             
-            # Features de phase_in
+            # Features básicas de phase_in (útiles para capturar estacionalidad)
             df['phase_in_month'] = df['phase_in'].dt.month
             df['phase_in_quarter'] = df['phase_in'].dt.quarter
-            df['phase_in_week'] = df['phase_in'].dt.isocalendar().week
-            df['phase_in_dayofyear'] = df['phase_in'].dt.dayofyear
             
-            # Features de phase_out
-            df['phase_out_month'] = df['phase_out'].dt.month
-            df['phase_out_quarter'] = df['phase_out'].dt.quarter
-            
-            # Season indicator (1: Spring-Summer, 2: Fall-Winter)
-            df['season_type'] = df['phase_in_month'].apply(
-                lambda x: 1 if x in [3, 4, 5, 6, 7, 8] else 2
+            # Season indicator (Spring-Summer vs Fall-Winter) - MUY importante en moda
+            df['is_spring_summer'] = df['phase_in_month'].apply(
+                lambda x: 1 if x in [3, 4, 5, 6, 7, 8] else 0
             )
         
         return df
     
     def create_aggregated_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Crea features agregadas por grupo"""
+        """
+        Crea features agregadas por grupo.
+        
+        ACLARACIÓN: Estas NO son features numéricas directas.
+        Son estadísticas calculadas AGRUPANDO por categorías.
+        Por ejemplo: "promedio de producción para productos de la familia Dresses"
+        """
         df = df.copy()
         
-        # Agregar features por familia de producto
+        # Agregar SOLO media por familia (lo más importante)
         if 'family' in df.columns and TARGET in df.columns:
             family_stats = df.groupby('family')[TARGET].agg([
-                ('family_mean_production', 'mean'),
-                ('family_std_production', 'std'),
-                ('family_median_production', 'median')
+                ('family_mean_production', 'mean')
             ]).reset_index()
             df = df.merge(family_stats, on='family', how='left')
         
-        # Agregar features por categoría
+        # Media por categoría
         if 'category' in df.columns and TARGET in df.columns:
             category_stats = df.groupby('category')[TARGET].agg([
-                ('category_mean_production', 'mean'),
-                ('category_median_production', 'median')
+                ('category_mean_production', 'mean')
             ]).reset_index()
             df = df.merge(category_stats, on='category', how='left')
         
-        # Features por número de tiendas
+        # Media por número de tiendas (productos con misma distribución)
         if 'num_stores' in df.columns and TARGET in df.columns:
             stores_stats = df.groupby('num_stores')[TARGET].agg([
                 ('stores_mean_production', 'mean')
             ]).reset_index()
             df = df.merge(stores_stats, on='num_stores', how='left')
         
-        # Features por temporada
+        # Media por temporada
         if 'id_season' in df.columns and TARGET in df.columns:
             season_stats = df.groupby('id_season')[TARGET].agg([
-                ('season_mean_production', 'mean'),
-                ('season_total_production', 'sum')
+                ('season_mean_production', 'mean')
             ]).reset_index()
             df = df.merge(season_stats, on='id_season', how='left')
         
         return df
     
     def create_interaction_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Crea features de interacción"""
+        """
+        Crea features de interacción (COMENTADAS - no usar por ahora)
+        Solo descomenta si los resultados base no son buenos
+        """
         df = df.copy()
         
-        if 'num_stores' in df.columns and 'num_sizes' in df.columns:
-            # Capacidad total (tiendas * tamaños)
-            df['total_capacity'] = df['num_stores'] * df['num_sizes']
+        # COMENTADO: Capacidad total
+        # if 'num_stores' in df.columns and 'num_sizes' in df.columns:
+        #     df['total_capacity'] = df['num_stores'] * df['num_sizes']
         
-        if 'num_stores' in df.columns and 'price' in df.columns:
-            # Potencial de ingresos
-            df['revenue_potential'] = df['num_stores'] * df['price']
+        # COMENTADO: Potencial de ingresos
+        # if 'num_stores' in df.columns and 'price' in df.columns:
+        #     df['revenue_potential'] = df['num_stores'] * df['price']
         
-        if 'price' in df.columns and 'num_sizes' in df.columns:
-            # Precio promedio por tamaño
-            df['price_per_size'] = df['price'] / (df['num_sizes'] + 1)
+        # COMENTADO: Precio por tamaño
+        # if 'price' in df.columns and 'num_sizes' in df.columns:
+        #     df['price_per_size'] = df['price'] / (df['num_sizes'] + 1)
         
-        if 'life_cycle_length' in df.columns and 'num_stores' in df.columns:
-            # Exposición total (semanas * tiendas)
-            df['total_exposure'] = df['life_cycle_length'] * df['num_stores']
+        # COMENTADO: Exposición total
+        # if 'life_cycle_length' in df.columns and 'num_stores' in df.columns:
+        #     df['total_exposure'] = df['life_cycle_length'] * df['num_stores']
         
         return df
     
     def create_lag_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Crea features de lag basadas en productos similares"""
+        """
+        Crea features de lag (COMENTADAS - no usar por ahora)
+        Los lags pueden causar data leakage o no funcionar bien con productos nuevos
+        """
         df = df.copy()
         
-        # Ordenar por familia y temporada
-        if 'family' in df.columns and 'id_season' in df.columns:
-            df = df.sort_values(['family', 'id_season'])
-            
-            # Lag de producción por familia
-            if TARGET in df.columns:
-                df['family_lag1_production'] = df.groupby('family')[TARGET].shift(1)
-                df['family_lag2_production'] = df.groupby('family')[TARGET].shift(2)
+        # COMENTADO: Lag por familia
+        # if 'family' in df.columns and 'id_season' in df.columns:
+        #     df = df.sort_values(['family', 'id_season'])
+        #     if TARGET in df.columns:
+        #         df['family_lag1_production'] = df.groupby('family')[TARGET].shift(1)
+        #         df['family_lag2_production'] = df.groupby('family')[TARGET].shift(2)
         
         return df
     
     def encode_categorical_features(self, df: pd.DataFrame, 
                                     categorical_cols: List[str],
                                     is_train: bool = True) -> pd.DataFrame:
-        """Codifica features categóricas usando target encoding o frequency encoding"""
+        """
+        Codifica features categóricas.
+        - Target encoding para features con muchas categorías
+        - One-hot encoding para features con pocas categorías (<=5)
+        """
         df = df.copy()
         
         for col in categorical_cols:
             if col not in df.columns:
                 continue
-                
-            if is_train:
-                # Target encoding (solo en train)
-                if TARGET in df.columns:
-                    encoding_map = df.groupby(col)[TARGET].mean().to_dict()
-                    self.encoding_maps[col] = encoding_map
-                else:
-                    # Frequency encoding
-                    encoding_map = df[col].value_counts(normalize=True).to_dict()
-                    self.encoding_maps[col] = encoding_map
             
-            # Aplicar encoding
-            if col in self.encoding_maps:
-                df[f'{col}_encoded'] = df[col].map(self.encoding_maps[col])
-                df[f'{col}_encoded'].fillna(df[f'{col}_encoded'].median(), inplace=True)
+            # Contar categorías únicas
+            n_unique = df[col].nunique()
+            
+            # One-hot encoding para variables con pocas categorías
+            if n_unique <= 5 and n_unique > 1:
+                # One-hot encoding (crear columnas dummy)
+                dummies = pd.get_dummies(df[col], prefix=col, drop_first=False)
+                df = pd.concat([df, dummies], axis=1)
+            
+            # Target encoding para variables con muchas categorías
+            else:
+                if is_train:
+                    # Target encoding (solo en train)
+                    if TARGET in df.columns:
+                        encoding_map = df.groupby(col)[TARGET].mean().to_dict()
+                        self.encoding_maps[col] = encoding_map
+                    else:
+                        # Frequency encoding
+                        encoding_map = df[col].value_counts(normalize=True).to_dict()
+                        self.encoding_maps[col] = encoding_map
+                
+                # Aplicar encoding
+                if col in self.encoding_maps:
+                    df[f'{col}_encoded'] = df[col].map(self.encoding_maps[col])
+                    # Rellenar valores no vistos con la mediana
+                    df[f'{col}_encoded'].fillna(df[f'{col}_encoded'].median(), inplace=True)
         
         return df
     
@@ -180,8 +196,8 @@ class FeatureEngineer:
         """Aplica todas las transformaciones en datos de entrenamiento"""
         df = self.create_temporal_features(df)
         df = self.create_aggregated_features(df)
-        df = self.create_interaction_features(df)
-        df = self.create_lag_features(df)
+        # df = self.create_interaction_features(df)  # COMENTADO
+        # df = self.create_lag_features(df)  # COMENTADO
         df = self.process_image_embeddings(df)
         df = self.encode_categorical_features(df, categorical_cols, is_train=True)
         
@@ -191,7 +207,7 @@ class FeatureEngineer:
                   categorical_cols: List[str]) -> pd.DataFrame:
         """Aplica transformaciones en datos de test"""
         df = self.create_temporal_features(df)
-        df = self.create_interaction_features(df)
+        # df = self.create_interaction_features(df)  # COMENTADO
         df = self.process_image_embeddings(df)
         df = self.encode_categorical_features(df, categorical_cols, is_train=False)
         
@@ -200,4 +216,3 @@ class FeatureEngineer:
 
 # Variable target
 TARGET = 'Production'
-

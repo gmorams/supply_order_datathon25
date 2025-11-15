@@ -260,4 +260,3 @@ def detect_outliers(data: pd.Series, method: str = 'iqr', threshold: float = 1.5
     
     else:
         raise ValueError(f"Método no reconocido: {method}")
-
