@@ -18,8 +18,8 @@ def generate_submission(train_csv_path: str, test_csv_path: str):
     
     # Cargar datos
     print("\n1. Cargando datos...")
-    df_train = pd.read_csv(train_csv_path, delimiter=';')
-    df_test = pd.read_csv(test_csv_path, delimiter=';')
+    df_train = pd.read_csv(train_csv_path, delimiter=';', decimal=',')
+    df_test = pd.read_csv(test_csv_path, delimiter=';', decimal=',')
     
     print(f"   Train: {df_train.shape}")
     print(f"   Test: {df_test.shape}")
@@ -39,14 +39,37 @@ def generate_submission(train_csv_path: str, test_csv_path: str):
     
     print(f"   Features: {len(feature_cols)}")
     
-    # Entrenar
-    print("\n3. Entrenando modelo final...")
-    model = DemandPredictor()
-    model.train(X_train, y_train)
+    # Entrenar con K-Fold Cross-Validation
+    print("\n3. Entrenando modelo con K-Fold (5 folds)...")
+    from sklearn.model_selection import KFold
     
-    # Predecir
-    print("\n4. Generando predicciones...")
-    predictions = model.predict(X_test)
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    
+    oof_preds = np.zeros(len(X_train))
+    test_preds_folds = []
+    models = []  # Guardar todos los modelos
+    
+    for fold, (trn_idx, val_idx) in enumerate(kf.split(X_train)):
+        print(f"   Fold {fold+1}/5...")
+        
+        X_trn, X_val = X_train.iloc[trn_idx], X_train.iloc[val_idx]
+        y_trn, y_val = y_train.iloc[trn_idx], y_train.iloc[val_idx]
+        
+        fold_model = DemandPredictor()
+        fold_model.train(X_trn, y_trn)
+        models.append(fold_model)
+        
+        # OOF (out-of-fold predictions para evaluación)
+        oof_preds[val_idx] = fold_model.predict(X_val)
+        
+        # Predicciones de test para este fold
+        test_pred_fold = fold_model.predict(X_test)
+        test_preds_folds.append(test_pred_fold)
+    
+    # Promedio de las predicciones de los 5 folds
+    print("\n4. Generando predicciones finales (promedio de folds)...")
+    predictions = np.mean(test_preds_folds, axis=0)
+    predictions = np.maximum(predictions, 0)
     
     # Crear submission
     submission = pd.DataFrame({
@@ -62,7 +85,10 @@ def generate_submission(train_csv_path: str, test_csv_path: str):
     output_path = f'outputs/submission_{timestamp}.csv'
     
     submission.to_csv(output_path, index=False)
-    model.save_model('models/lgbm_model_final.pkl')
+    
+    # Guardar todos los modelos de los folds
+    for i, fold_model in enumerate(models):
+        fold_model.save_model(f'models/lgbm_model_fold_{i+1}.pkl')
     
     print("\n" + "="*80)
     print("SUBMISSION GENERADO")
@@ -70,11 +96,12 @@ def generate_submission(train_csv_path: str, test_csv_path: str):
     print(f"Archivo: {output_path}")
     print(f"Predicciones: {len(submission)}")
     print(f"Producción total: {submission['Production'].sum():,}")
+    print(f"Modelos guardados: {len(models)} folds")
     
     print(f"\nPrimeras líneas del submission:")
     print(submission.head(10).to_string(index=False))
     
-    return submission, model
+    return submission, models
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ def validate_model(train_csv_path: str, test_size: float = 0.2, random_state: in
     
     # Cargar datos
     print("\n1. Cargando datos...")
-    df = pd.read_csv(train_csv_path, delimiter=';')
+    df = pd.read_csv(train_csv_path, delimiter=';', decimal=',')
     print(f"   Dataset: {df.shape}")
     
     # Split de IDs

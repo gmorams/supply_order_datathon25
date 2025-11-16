@@ -147,18 +147,38 @@ class FeatureProcessor:
         for col in categorical_cols:
             if col in df.columns:
                 if is_train:
+                    # TRAIN: aseguramos que 'unknown' siempre existe como clase
+                    # 1) rellenamos NAs con 'unknown' y convertimos a string
+                    values = df[col].fillna('unknown').astype(str)
+                    
+                    # 2) construimos la lista de clases garantizando que 'unknown' está
+                    unique_classes = np.unique(values.tolist() + ['unknown'])
+                    
                     le = LabelEncoder()
-                    df[f'{col}_encoded'] = le.fit_transform(df[col].fillna('unknown'))
+                    le.fit(unique_classes)
+                    
+                    df[f'{col}_encoded'] = le.transform(values)
                     self.label_encoders[col] = le
+                
                 else:
+                    # TEST: usamos el encoder aprendido en train
                     if col in self.label_encoders:
                         le = self.label_encoders[col]
-                        # Manejar categorías no vistas
-                        df[f'{col}_encoded'] = df[col].fillna('unknown').apply(
-                            lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                        classes_set = set(le.classes_.tolist())
+                        
+                        # Rellenamos NAs y convertimos a string
+                        values = df[col].fillna('unknown').astype(str)
+                        
+                        # Cualquier categoría no vista en train → 'unknown'
+                        values_mapped = values.apply(
+                            lambda x: x if x in classes_set else 'unknown'
                         )
+                        
+                        df[f'{col}_encoded'] = le.transform(values_mapped)
                     else:
-                        df[f'{col}_encoded'] = -1
+                        # Si por lo que sea no hay encoder guardado, todo a 'unknown'
+                        # (se codificará como el índice de 'unknown' si existe)
+                        df[f'{col}_encoded'] = 0
         
         # One-hot encoding para color_name (solo los más comunes)
         if 'color_name' in df.columns:
@@ -183,22 +203,26 @@ class FeatureProcessor:
         """
         if mode == 'train':
             # Agrupar por ID y calcular demanda total
-            agg_dict = {
-                'weekly_demand': 'sum',  # Esta será nuestra variable objetivo
-                'weekly_sales': 'sum'
-            }
+            agg_dict = {}
+            
+            # Solo agregar las columnas que existen
+            if 'weekly_demand' in df.columns:
+                agg_dict['weekly_demand'] = 'sum'  # Esta será nuestra variable objetivo
+            if 'weekly_sales' in df.columns:
+                agg_dict['weekly_sales'] = 'sum'
             
             # Mantener las features del producto (tomar el primer valor)
-            feature_cols = [col for col in df.columns if col not in 
-                          ['ID', 'weekly_demand', 'weekly_sales', 'num_week_iso', 'Production']]
+            exclude_cols = ['ID', 'weekly_demand', 'weekly_sales', 'num_week_iso', 'Production']
+            feature_cols = [col for col in df.columns if col not in exclude_cols]
             
             for col in feature_cols:
                 agg_dict[col] = 'first'
             
             df_agg = df.groupby('ID', as_index=False).agg(agg_dict)
             
-            # Renombrar para claridad
-            df_agg = df_agg.rename(columns={'weekly_demand': 'demand_total'})
+            # Renombrar para claridad si existe la columna
+            if 'weekly_demand' in df_agg.columns:
+                df_agg = df_agg.rename(columns={'weekly_demand': 'demand_total'})
             
             return df_agg
         else:
