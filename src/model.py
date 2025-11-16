@@ -7,9 +7,14 @@ import pickle
 class DemandPredictor:
     """Modelo de predicción de demanda usando LightGBM"""
     
-    def __init__(self, params: dict = None):
+    def __init__(self, params: dict = None, log_target: bool = False):
+        """
+        log_target:
+            - False  -> entrena y predice en escala original (como antes)
+            - True   -> entrena en log1p(demanda) y predice en escala original
+        """
         if params is None:
-            # Parámetros optimizados para regresión de demanda
+            # Parámetros por defecto para regresión de demanda
             self.params = {
                 'objective': 'regression',
                 'metric': 'rmse',
@@ -28,42 +33,68 @@ class DemandPredictor:
         
         self.model = None
         self.feature_names = None
+        self.log_target = log_target  # NUEVO
+    
+    def _transform_y(self, y):
+        """Transforma y según el modo (log o no). Se usa solo en train."""
+        y = np.asarray(y, dtype=float)
+        if self.log_target:
+            return np.log1p(y)
+        return y
+    
+    def _inverse_transform_y(self, y_pred):
+        """Invierte la transformación del target (para devolver a escala original)."""
+        y_pred = np.asarray(y_pred, dtype=float)
+        if self.log_target:
+            y_pred = np.expm1(y_pred)
+        # Asegurar no negatividad en escala original
+        y_pred = np.maximum(y_pred, 0)
+        return y_pred
     
     def train(self, X_train, y_train, X_val=None, y_val=None):
-        """Entrena el modelo LightGBM"""
+        """Entrena el modelo LightGBM.
         
+        Espera y_train en ESCALA ORIGINAL (demand_total).
+        Si log_target=True, se transforma internamente.
+        """
         self.feature_names = X_train.columns.tolist()
         
+        y_train_t = self._transform_y(y_train)
+        
         if X_val is not None and y_val is not None:
+            y_val_t = self._transform_y(y_val)
+            
             # Entrenar con validación
             self.model = lgb.LGBMRegressor(**self.params)
             self.model.fit(
-                X_train, y_train,
-                eval_set=[(X_val, y_val)],
+                X_train, y_train_t,
+                eval_set=[(X_val, y_val_t)],
                 eval_metric='rmse',
                 callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]
             )
         else:
             # Entrenar sin validación
             self.model = lgb.LGBMRegressor(**self.params)
-            self.model.fit(X_train, y_train)
+            self.model.fit(X_train, y_train_t)
         
         return self
     
     def predict(self, X):
-        """Predice la demanda"""
+        """Predice la demanda en ESCALA ORIGINAL."""
         if self.model is None:
             raise ValueError("Modelo no entrenado. Llama a train() primero.")
         
-        predictions = self.model.predict(X)
-        # Asegurar que las predicciones sean no negativas
-        predictions = np.maximum(predictions, 0)
-        
-        return predictions
+        preds_raw = self.model.predict(X)
+        preds = self._inverse_transform_y(preds_raw)
+        return preds
     
     def evaluate(self, X, y_true):
-        """Evalúa el modelo"""
-        y_pred = self.predict(X)
+        """Evalúa el modelo en ESCALA ORIGINAL.
+        
+        y_true debe estar en escala original (demand_total).
+        """
+        y_true = np.asarray(y_true, dtype=float)
+        y_pred = self.predict(X)  # ya viene en escala original
         
         mae = mean_absolute_error(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
@@ -95,7 +126,8 @@ class DemandPredictor:
             pickle.dump({
                 'model': self.model,
                 'feature_names': self.feature_names,
-                'params': self.params
+                'params': self.params,
+                'log_target': self.log_target   # NUEVO: guardamos el flag
             }, f)
     
     def load_model(self, filepath: str):
@@ -105,6 +137,8 @@ class DemandPredictor:
             self.model = data['model']
             self.feature_names = data['feature_names']
             self.params = data['params']
+            # Soportar modelos antiguos que no guardaban log_target
+            self.log_target = data.get('log_target', False)
 
 
 def custom_score(y_true, y_pred, penalty_weight: float = 1.5):
@@ -120,15 +154,14 @@ def custom_score(y_true, y_pred, penalty_weight: float = 1.5):
     underestimation = np.sum(np.maximum(errors, 0) * penalty_weight)
     overestimation = np.sum(np.maximum(-errors, 0))
     
-    total_error = underestimation + overestimation
-    total_demand = np.sum(y_true)
+    total_error = np.sum(y_true)
     
     # Score de 0 a 100 (100 = perfecto)
-    if total_demand == 0:
+    if total_error == 0:
         return 0
     
     # Normalizar el error
-    normalized_error = total_error / total_demand
+    normalized_error = (underestimation + overestimation) / total_error
     
     # Convertir a score (menos error = mejor score)
     score = max(0, 100 * (1 - normalized_error))
@@ -137,7 +170,7 @@ def custom_score(y_true, y_pred, penalty_weight: float = 1.5):
 
 
 def calculate_metrics(y_true, y_pred):
-    """Calcula todas las métricas relevantes"""
+    """Calcula todas las métricas relevantes (asume escala original)"""
     
     # Métricas estándar
     mae = mean_absolute_error(y_true, y_pred)

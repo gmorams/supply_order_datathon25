@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder, RobustScaler   # <<< NUEVO
+from sklearn.preprocessing import LabelEncoder, RobustScaler
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import Tuple, Dict
 import warnings
@@ -15,7 +15,7 @@ class FeatureProcessor:
         self.label_encoders = {}
         self.embedding_matrix_train = None
         self.embedding_train_targets = None
-        self.scaler = None                     # <<< NUEVO: scaler global para numéricas
+        self.scaler = None   # scaler global para numéricas
         
     def parse_embedding(self, embedding_str: str) -> np.ndarray:
         """Convierte el string de embedding a array numpy"""
@@ -245,7 +245,7 @@ class FeatureProcessor:
         # Features de embeddings (similitud de coseno / kNN)
         df = self.create_embedding_features(df, is_train=is_train)
         
-        # <<< NUEVO: normalización robusta de columnas numéricas >>>
+        # Normalización robusta de columnas numéricas
         num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         # No escalar ID, target ni Production
         num_cols = [c for c in num_cols if c not in ['ID', 'id_season', 'demand_total', 'Production']]
@@ -257,7 +257,6 @@ class FeatureProcessor:
         else:
             if self.scaler is not None and num_cols:
                 df[num_cols] = self.scaler.transform(df[num_cols])
-        # <<< FIN NORMALIZACIÓN >>>
         
         # Eliminar columnas categóricas originales y otras que no necesitamos
         cols_to_drop = [
