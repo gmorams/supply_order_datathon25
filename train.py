@@ -28,6 +28,9 @@ def load_data(mode: str = 'deploying'):
         test_df = pd.read_csv(config.TEST_FILE, sep=';', low_memory=False)
         sample_submission = pd.read_csv(config.SAMPLE_SUBMISSION_FILE)
         
+        # AGREGAR: Calcular demand_total (suma de weekly_demand por ID)
+        train_df['demand_total'] = train_df.groupby('ID')['weekly_demand'].transform('sum')
+        
         print(f"   ✓ Train: {train_df.shape}")
         print(f"   ✓ Test: {test_df.shape}")
         
@@ -36,6 +39,9 @@ def load_data(mode: str = 'deploying'):
     else:  # mode == 'practising'
         # Cargar train completo
         full_train = pd.read_csv(config.TRAIN_FILE, sep=';', low_memory=False)
+        
+        # AGREGAR: Calcular demand_total ANTES de hacer el split
+        full_train['demand_total'] = full_train.groupby('ID')['weekly_demand'].transform('sum')
         
         print(f"   ℹ️  Train completo: {full_train.shape}")
         
@@ -57,8 +63,8 @@ def load_data(mode: str = 'deploying'):
         subtrain_df = full_train[full_train['ID'].isin(train_ids)].copy()
         subtest_full = full_train[full_train['ID'].isin(test_ids)].copy()
         
-        # Para subtest: mantener solo 1 fila por ID (la última semana o agregar)
-        # Agregamos las ventas semanales para tener el Production total real
+        # Para subtest: mantener solo 1 fila por ID
+        # IMPORTANTE: demand_total ya está calculado, solo tomar el primer valor
         subtest_ground_truth = subtest_full.groupby('ID').agg({
             'aggregated_family': 'first',
             'family': 'first',
@@ -87,12 +93,11 @@ def load_data(mode: str = 'deploying'):
             'has_plus_sizes': 'first',
             'price': 'first',
             'id_season': 'first',
-            'Production': 'first',  # Valor real de producción
-            'weekly_demand': 'sum'  # Demanda total (ground truth)
+            'demand_total': 'first'  # CAMBIADO: usar demand_total en vez de weekly_demand sum
         }).reset_index()
         
         # Crear subtest sin columnas de target (simular test real)
-        subtest_df = subtest_ground_truth.drop(['Production', 'weekly_demand'], axis=1)
+        subtest_df = subtest_ground_truth.drop(['demand_total'], axis=1)
         
         print(f"   ✓ Subtrain: {subtrain_df.shape}")
         print(f"   ✓ Subtest: {subtest_df.shape}")
@@ -108,34 +113,54 @@ def prepare_features(train_df, test_df, mode: str = 'deploying'):
     fe = FeatureEngineer()
     
     # Aplicar transformaciones
-    print("   - Creando features temporales...")
     train_processed = fe.fit_transform(train_df, config.CATEGORICAL_FEATURES)
-    
-    print("   - Aplicando transformaciones a test...")
     test_processed = fe.transform(test_df, config.CATEGORICAL_FEATURES)
     
-    # Agregar datos semanales solo si existen (modo deploying)
-    if mode == 'deploying' and 'weekly_sales' in train_processed.columns:
-        print("   - Agregando datos semanales por producto...")
-        
-        weekly_agg = train_processed.groupby('ID').agg({
-            'weekly_sales': ['sum', 'mean', 'max', 'std'],
-            'weekly_demand': ['sum', 'mean', 'max', 'std']
-        }).reset_index()
-        
-        weekly_agg.columns = ['ID'] + [f'{col[0]}_{col[1]}' for col in weekly_agg.columns[1:]]
-        train_processed = train_processed.merge(weekly_agg, on='ID', how='left')
-        
-        # Para test, usar estadísticas globales
-        for col in weekly_agg.columns:
-            if col != 'ID' and col not in test_processed.columns:
-                test_processed[col] = train_processed[col].median()
+    # ===== CRÍTICO: COLAPSAR TRAIN A 1 FILA POR ID =====
+    print("   - Colapsando train a 1 fila por producto...")
+    
+    # Identificar columnas que NO deben agregarse (son constantes por ID)
+    constant_cols = [
+        'ID', 'aggregated_family', 'family', 'category', 'fabric', 
+        'color_name', 'color_rgb', 'image_embedding', 'length_type', 
+        'silhouette_type', 'waist_type', 'neck_lapel_type', 
+        'sleeve_length_type', 'heel_shape_type', 'toecap_type',
+        'woven_structure', 'knit_structure', 'print_type', 'archetype', 
+        'moment', 'phase_in', 'phase_out', 'life_cycle_length',
+        'num_stores', 'num_sizes', 'has_plus_sizes', 'price', 'id_season',
+        'demand_total'  # TARGET
+    ]
+    
+    # Identificar columnas agregadas (features creadas)
+    aggregated_cols = [col for col in train_processed.columns 
+                      if col not in constant_cols and 
+                      col not in ['weekly_sales', 'weekly_demand', 'num_week_iso', 'year']]
+    
+    # Crear diccionario de agregación
+    agg_dict = {}
+    
+    # Columnas constantes: tomar 'first'
+    for col in constant_cols:
+        if col in train_processed.columns:
+            agg_dict[col] = 'first'
+    
+    # Columnas agregadas: tomar 'first' (ya son constantes por ID después del feature engineering)
+    for col in aggregated_cols:
+        if col in train_processed.columns:
+            agg_dict[col] = 'first'
+    
+    # Agrupar por ID
+    train_collapsed = train_processed.groupby('ID').agg(agg_dict).reset_index(drop=True)
+    
+    print(f"   ✓ Train colapsado: {len(train_df)} filas → {len(train_collapsed)} filas")
+    
+    # ===== FIN COLAPSO =====
     
     # Seleccionar features
     exclude_cols = config.EXCLUDE_COLS + ['phase_in', 'phase_out']
-    feature_cols = [col for col in train_processed.columns 
+    feature_cols = [col for col in train_collapsed.columns 
                    if col not in exclude_cols and 
-                   train_processed[col].dtype in ['int64', 'float64']]
+                   train_collapsed[col].dtype in ['int64', 'float64']]
     
     # Asegurar mismas columnas en test
     missing_in_test = set(feature_cols) - set(test_processed.columns)
@@ -144,18 +169,29 @@ def prepare_features(train_df, test_df, mode: str = 'deploying'):
         for col in missing_in_test:
             test_processed[col] = 0
     
+    # Asegurar que train tiene las mismas features que test
+    extra_in_train = set(feature_cols) - set(test_processed.columns)
+    if extra_in_train:
+        print(f"   ⚠️  Eliminando columnas extra en train: {extra_in_train}")
+        feature_cols = [col for col in feature_cols if col in test_processed.columns]
+    
     # Rellenar NaN
-    train_processed[feature_cols] = train_processed[feature_cols].fillna(0)
+    train_collapsed[feature_cols] = train_collapsed[feature_cols].fillna(0)
     test_processed[feature_cols] = test_processed[feature_cols].fillna(0)
     
+    # Verificar que no hay infinitos
+    train_collapsed[feature_cols] = train_collapsed[feature_cols].replace([np.inf, -np.inf], 0)
+    test_processed[feature_cols] = test_processed[feature_cols].replace([np.inf, -np.inf], 0)
+    
     # Preparar datos
-    X_train = train_processed[feature_cols]
-    y_train = train_processed[config.TARGET]
+    X_train = train_collapsed[feature_cols]
+    y_train = train_collapsed[config.TARGET]
     X_test = test_processed[feature_cols]
     
-    print(f"   ✓ Features: {len(feature_cols)}")
+    print(f"   ✓ Features finales: {len(feature_cols)}")
     print(f"   ✓ X_train: {X_train.shape}")
     print(f"   ✓ X_test: {X_test.shape}")
+    print(f"   ✓ Target range: [{y_train.min():.0f}, {y_train.max():.0f}]")
     
     return X_train, y_train, X_test, test_processed['ID'], feature_cols, fe
 
@@ -237,13 +273,12 @@ def evaluate_practising(submission: pd.DataFrame, ground_truth: pd.DataFrame):
     print("="*60)
     
     # Merge predicciones con ground truth
-    eval_df = submission.merge(ground_truth[['ID', 'Production', 'weekly_demand']], 
+    eval_df = submission.merge(ground_truth[['ID', 'demand_total']], 
                                on='ID', 
                                suffixes=('_pred', '_real'))
     
-    y_pred = eval_df['Production_pred'].values
-    y_real = eval_df['Production_real'].values
-    demand_real = eval_df['weekly_demand'].values
+    y_pred = eval_df['Production'].values  # Lo que predijimos
+    demand_real = eval_df['demand_total'].values  # Demanda real (suma de weekly_demand)
     
     # Calcular métricas según el enunciado
     # VAR = full-price sales / production

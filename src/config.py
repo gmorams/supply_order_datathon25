@@ -14,12 +14,12 @@ TRAIN_FILE = DATA_DIR / "train.csv"
 TEST_FILE = DATA_DIR / "test.csv"
 SAMPLE_SUBMISSION_FILE = DATA_DIR / "sample_submission.csv"
 
-# Target
-TARGET = 'Production'
+# Target - CORREGIDO
+TARGET = 'demand_total'  # Suma de weekly_demand por producto
 
 # Features a excluir del modelo
 EXCLUDE_COLS = ['ID', 'Production', 'weekly_sales', 'weekly_demand', 
-                'num_week_iso', 'year', 'image_embedding']
+                'num_week_iso', 'year', 'image_embedding', 'demand_total']
 
 # Features categóricas para encoding
 CATEGORICAL_FEATURES = [
@@ -52,4 +52,4 @@ OPTUNA_N_TRIALS = 50
 OPTUNA_TIMEOUT = 3600
 
 # Split para modo practising
-TEST_SIZE = 0.2  # 20% de los IDs únicos para test
+TEST_SIZE = 0.2
