@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, RobustScaler   # <<< NUEVO
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import Tuple, Dict
 import warnings
@@ -14,7 +14,8 @@ class FeatureProcessor:
     def __init__(self):
         self.label_encoders = {}
         self.embedding_matrix_train = None
-        self.embedding_train_targets = None  
+        self.embedding_train_targets = None
+        self.scaler = None                     # <<< NUEVO: scaler global para numéricas
         
     def parse_embedding(self, embedding_str: str) -> np.ndarray:
         """Convierte el string de embedding a array numpy"""
@@ -148,10 +149,8 @@ class FeatureProcessor:
             if col in df.columns:
                 if is_train:
                     # TRAIN: aseguramos que 'unknown' siempre existe como clase
-                    # 1) rellenamos NAs con 'unknown' y convertimos a string
                     values = df[col].fillna('unknown').astype(str)
                     
-                    # 2) construimos la lista de clases garantizando que 'unknown' está
                     unique_classes = np.unique(values.tolist() + ['unknown'])
                     
                     le = LabelEncoder()
@@ -166,18 +165,14 @@ class FeatureProcessor:
                         le = self.label_encoders[col]
                         classes_set = set(le.classes_.tolist())
                         
-                        # Rellenamos NAs y convertimos a string
                         values = df[col].fillna('unknown').astype(str)
                         
-                        # Cualquier categoría no vista en train → 'unknown'
                         values_mapped = values.apply(
                             lambda x: x if x in classes_set else 'unknown'
                         )
                         
                         df[f'{col}_encoded'] = le.transform(values_mapped)
                     else:
-                        # Si por lo que sea no hay encoder guardado, todo a 'unknown'
-                        # (se codificará como el índice de 'unknown' si existe)
                         df[f'{col}_encoded'] = 0
         
         # One-hot encoding para color_name (solo los más comunes)
@@ -247,8 +242,22 @@ class FeatureProcessor:
         # Features de producto
         df = self.create_product_features(df, is_train=is_train)
         
-        # Features de embeddings (similitud de coseno)
+        # Features de embeddings (similitud de coseno / kNN)
         df = self.create_embedding_features(df, is_train=is_train)
+        
+        # <<< NUEVO: normalización robusta de columnas numéricas >>>
+        num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        # No escalar ID, target ni Production
+        num_cols = [c for c in num_cols if c not in ['ID', 'id_season', 'demand_total', 'Production']]
+        
+        if is_train:
+            self.scaler = RobustScaler()
+            if num_cols:
+                df[num_cols] = self.scaler.fit_transform(df[num_cols])
+        else:
+            if self.scaler is not None and num_cols:
+                df[num_cols] = self.scaler.transform(df[num_cols])
+        # <<< FIN NORMALIZACIÓN >>>
         
         # Eliminar columnas categóricas originales y otras que no necesitamos
         cols_to_drop = [

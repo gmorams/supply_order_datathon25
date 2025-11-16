@@ -1,38 +1,32 @@
-# Datos (muy grandes para GitHub)
-data/
-*.csv
+# Archivos de datos grandes
+data/train.csv
+data/test.csv
+data/*.csv
 
 # Modelos entrenados
-models/
-*.pkl
+models/*.pkl
+
+# Outputs (submissions)
+outputs/*.csv
 
 # Python
 __pycache__/
+*/__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
+dist/
+build/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# Entornos virtuales
+venv/
+env/
+ENV/
 
 # IDEs
 .vscode/
@@ -40,8 +34,8 @@ wheels/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Outputs (opcional - descomenta si no quieres subir submissions)
-# outputs/
+# Sistema
+.DS_Store
+Thumbs.db
 
