@@ -10,9 +10,11 @@ warnings.filterwarnings('ignore')
 class FeatureProcessor:
     """Procesa las features del dataset de Mango"""
     
+    
     def __init__(self):
         self.label_encoders = {}
         self.embedding_matrix_train = None
+        self.embedding_train_targets = None  
         
     def parse_embedding(self, embedding_str: str) -> np.ndarray:
         """Convierte el string de embedding a array numpy"""
@@ -20,36 +22,97 @@ class FeatureProcessor:
             return np.zeros(512)  # Asumiendo 512 dimensiones
         return np.array([float(x) for x in str(embedding_str).split(',')])
     
-    def create_embedding_features(self, df: pd.DataFrame, is_train: bool = True) -> pd.DataFrame:
-        """
-        Crea features de similitud de coseno con los embeddings de imágenes
-        """
+    def create_embedding_features(self, df: pd.DataFrame, is_train: bool = True, k: int = 20) -> pd.DataFrame:
+        """ Crea features basadas en los k vecinos más cercanos en el espacio de embeddings.
+        - En train: usa vecinos dentro de train (leave-one-out, excluye el propio producto).
+        - En test: usa vecinos en los productos de train. """
         df = df.copy()
         
-        # Parsear embeddings
+        # Parsear embeddings a matriz numpy
         embeddings = np.array([self.parse_embedding(emb) for emb in df['image_embedding']])
         
         if is_train:
+            # Guardamos la matriz de embeddings de train
             self.embedding_matrix_train = embeddings
-            # Para train, calculamos similitud promedio con todos los productos
-            similarities = cosine_similarity(embeddings)
-            df['embedding_avg_similarity'] = similarities.mean(axis=1)
-            df['embedding_max_similarity'] = similarities.max(axis=1)
-            df['embedding_min_similarity'] = similarities.min(axis=1)
-        else:
-            # Para test, calculamos similitud con los productos de train
-            if self.embedding_matrix_train is not None:
-                similarities = cosine_similarity(embeddings, self.embedding_matrix_train)
-                df['embedding_avg_similarity'] = similarities.mean(axis=1)
-                df['embedding_max_similarity'] = similarities.max(axis=1)
-                df['embedding_min_similarity'] = similarities.min(axis=1)
+            
+            # Si tenemos la demanda total, la guardamos alineada con los embeddings
+            if 'demand_total' in df.columns:
+                self.embedding_train_targets = df['demand_total'].values
+            
+            # Similitud coseno entre todos los productos de train
+            similarities = cosine_similarity(embeddings)  # shape (N, N)
+            n = similarities.shape[0]
+            
+            if n > 1:
+                # Excluir la similitud consigo mismo para evitar fuga de información
+                np.fill_diagonal(similarities, -1.0)
+                
+                # k efectivo (por si hay pocos productos)
+                k_eff = min(k, n - 1)
+                
+                # Índices de los k vecinos más similares por fila
+                knn_idx = np.argpartition(-similarities, k_eff, axis=1)[:, :k_eff]
+                topk_sims = np.take_along_axis(similarities, knn_idx, axis=1)  # shape (N, k_eff)
+                
+                # Features de similitud
+                df['embedding_mean_sim_topk'] = topk_sims.mean(axis=1)
+                df['embedding_max_sim_topk'] = topk_sims.max(axis=1)
+                
+                # Features basadas en demanda de los vecinos (si tenemos target)
+                if self.embedding_train_targets is not None:
+                    neighbor_demand = self.embedding_train_targets[knn_idx]  # (N, k_eff)
+                    df['neighbor_mean_demand_topk'] = neighbor_demand.mean(axis=1)
+                    df['neighbor_demand_sim_weighted'] = (
+                        (neighbor_demand * topk_sims).sum(axis=1) / (topk_sims.sum(axis=1) + 1e-6)
+                    )
             else:
-                df['embedding_avg_similarity'] = 0
-                df['embedding_max_similarity'] = 0
-                df['embedding_min_similarity'] = 0
+                # Caso degenerado: solo un producto
+                df['embedding_mean_sim_topk'] = 0.0
+                df['embedding_max_sim_topk'] = 0.0
+                df['neighbor_mean_demand_topk'] = df.get('demand_total', pd.Series(0.0, index=df.index))
+                df['neighbor_demand_sim_weighted'] = df['neighbor_mean_demand_topk']
+        
+        else:
+            # TEST: usamos los embeddings de train como "base"
+            if self.embedding_matrix_train is not None:
+                similarities = cosine_similarity(embeddings, self.embedding_matrix_train)  # (N_test, N_train)
+                n_train = self.embedding_matrix_train.shape[0]
+                
+                if n_train > 0:
+                    k_eff = min(k, n_train)
+                    
+                    knn_idx = np.argpartition(-similarities, k_eff, axis=1)[:, :k_eff]
+                    topk_sims = np.take_along_axis(similarities, knn_idx, axis=1)  # (N_test, k_eff)
+                    
+                    # Features de similitud respecto a train
+                    df['embedding_mean_sim_topk'] = topk_sims.mean(axis=1)
+                    df['embedding_max_sim_topk'] = topk_sims.max(axis=1)
+                    
+                    # Features de demanda de vecinos de train (si tenemos targets de train)
+                    if self.embedding_train_targets is not None:
+                        neighbor_demand = self.embedding_train_targets[knn_idx]  # (N_test, k_eff)
+                        df['neighbor_mean_demand_topk'] = neighbor_demand.mean(axis=1)
+                        df['neighbor_demand_sim_weighted'] = (
+                            (neighbor_demand * topk_sims).sum(axis=1) / (topk_sims.sum(axis=1) + 1e-6)
+                        )
+                    else:
+                        df['neighbor_mean_demand_topk'] = 0.0
+                        df['neighbor_demand_sim_weighted'] = 0.0
+                else:
+                    # No hay embeddings de train por algún motivo raro
+                    df['embedding_mean_sim_topk'] = 0.0
+                    df['embedding_max_sim_topk'] = 0.0
+                    df['neighbor_mean_demand_topk'] = 0.0
+                    df['neighbor_demand_sim_weighted'] = 0.0
+            else:
+                # Por si alguien llama al processor de test sin haber pasado antes por train
+                df['embedding_mean_sim_topk'] = 0.0
+                df['embedding_max_sim_topk'] = 0.0
+                df['neighbor_mean_demand_topk'] = 0.0
+                df['neighbor_demand_sim_weighted'] = 0.0
         
         return df
-    
+
     def create_temporal_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Crea features temporales"""
         df = df.copy()
