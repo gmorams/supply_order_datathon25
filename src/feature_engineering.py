@@ -16,6 +16,7 @@ class FeatureProcessor:
         self.embedding_matrix_train = None
         self.embedding_train_targets = None
         self.scaler = None   # scaler global para numéricas
+        self.target_encoders = {}  # Para target encoding
         
     def parse_embedding(self, embedding_str: str) -> np.ndarray:
         """Convierte el string de embedding a array numpy"""
@@ -181,12 +182,63 @@ class FeatureProcessor:
             for color in top_colors:
                 df[f'color_{color.lower()}'] = (df['color_name'] == color).astype(int)
         
-        # Features numéricas
+        # Features numéricas SIMPLES (solo las básicas)
         df['price_log'] = np.log1p(df['price'])
         df['num_stores_log'] = np.log1p(df['num_stores'])
         
-        # Interacción: stores × sizes
+        # Solo la interacción más básica
         df['distribution_capacity'] = df['num_stores'] * df['num_sizes']
+        
+        # DESHABILITADO: Features de interacción adicionales causan overfitting
+        # df['price_per_store'] = df['price'] / (df['num_stores'] + 1)
+        # df['price_per_size'] = df['price'] / (df['num_sizes'] + 1)
+        # df['price_x_capacity'] = df['price'] * df['distribution_capacity']
+        # if 'life_cycle_length' in df.columns:
+        #     df['stores_per_week'] = df['num_stores'] / (df['life_cycle_length'] + 1)
+        
+        return df
+    
+    def create_target_encoding(self, df: pd.DataFrame, target_col: str = 'demand_total', 
+                               is_train: bool = True, smoothing: float = 10.0) -> pd.DataFrame:
+        """
+        Target encoding para variables categóricas
+        Reemplaza categorías con la media del target, con smoothing para categorías raras
+        """
+        df = df.copy()
+        
+        # Columnas categóricas para target encoding
+        cat_cols = ['aggregated_family', 'family', 'category', 'fabric', 
+                   'length_type', 'silhouette_type', 'print_type', 'moment']
+        
+        if is_train and target_col in df.columns:
+            # TRAIN: calcular las medias por categoría
+            global_mean = df[target_col].mean()
+            
+            for col in cat_cols:
+                if col in df.columns:
+                    # Calcular media por categoría con smoothing
+                    agg = df.groupby(col)[target_col].agg(['mean', 'count'])
+                    
+                    # Smoothing: (count * mean + smoothing * global_mean) / (count + smoothing)
+                    smoothed_mean = (agg['count'] * agg['mean'] + smoothing * global_mean) / (agg['count'] + smoothing)
+                    
+                    # Guardar el mapeo
+                    self.target_encoders[col] = {
+                        'mapping': smoothed_mean.to_dict(),
+                        'global_mean': global_mean
+                    }
+                    
+                    # Aplicar el encoding
+                    df[f'{col}_target_enc'] = df[col].map(smoothed_mean).fillna(global_mean)
+        
+        elif not is_train:
+            # TEST: usar los mapeos aprendidos en train
+            for col in cat_cols:
+                if col in df.columns and col in self.target_encoders:
+                    mapping = self.target_encoders[col]['mapping']
+                    global_mean = self.target_encoders[col]['global_mean']
+                    
+                    df[f'{col}_target_enc'] = df[col].map(mapping).fillna(global_mean)
         
         return df
     
@@ -242,21 +294,25 @@ class FeatureProcessor:
         # Features de producto
         df = self.create_product_features(df, is_train=is_train)
         
+        # DESHABILITADO: Target encoding causa overfitting
+        # if mode == 'train' and 'demand_total' in df.columns:
+        #     df = self.create_target_encoding(df, target_col='demand_total', is_train=is_train)
+        # elif mode == 'test':
+        #     df = self.create_target_encoding(df, is_train=False)
+        
         # Features de embeddings (similitud de coseno / kNN)
         df = self.create_embedding_features(df, is_train=is_train)
         
-        # Normalización robusta de columnas numéricas
-        num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        # No escalar ID, target ni Production
-        num_cols = [c for c in num_cols if c not in ['ID', 'id_season', 'demand_total', 'Production']]
-        
-        if is_train:
-            self.scaler = RobustScaler()
-            if num_cols:
-                df[num_cols] = self.scaler.fit_transform(df[num_cols])
-        else:
-            if self.scaler is not None and num_cols:
-                df[num_cols] = self.scaler.transform(df[num_cols])
+        # DESHABILITADO: Scaler no generaliza bien
+        # num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        # num_cols = [c for c in num_cols if c not in ['ID', 'id_season', 'demand_total', 'Production']]
+        # if is_train:
+        #     self.scaler = RobustScaler()
+        #     if num_cols:
+        #         df[num_cols] = self.scaler.fit_transform(df[num_cols])
+        # else:
+        #     if self.scaler is not None and num_cols:
+        #         df[num_cols] = self.scaler.transform(df[num_cols])
         
         # Eliminar columnas categóricas originales y otras que no necesitamos
         cols_to_drop = [

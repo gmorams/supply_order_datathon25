@@ -43,7 +43,7 @@ def generate_submission(train_csv_path: str, test_csv_path: str):
     print("\n3. Entrenando modelo con K-Fold (5 folds)...")
     from sklearn.model_selection import KFold
     
-    kf = KFold(n_splits=15, shuffle=True, random_state=42)
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)  # 5 es el valor óptimo
     
     oof_preds = np.zeros(len(X_train))
     test_preds_folds = []
