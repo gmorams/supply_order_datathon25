@@ -1,0 +1,552 @@
+---
+title: "Datathon"
+author: 
+- Marc Purgimon Serra
+- Hugo Nienhausen Mesanza
+- Bruna Colomer Molera
+- Giancarlo Morales Muñoz
+date: "2025-11-15"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/DATATHON_FME")
+```
+
+
+
+```{r}
+library(readr)
+sample_submission <- read_csv("sample_submission.csv")
+head(sample_submission)
+dim(sample_submission)
+```
+
+
+
+```{r}
+library(readr)
+train <- read_delim("train.csv", delim = ";", 
+    escape_double = FALSE, trim_ws = TRUE)
+head(train)
+summary(train)
+```
+
+```{r}
+library(readr)
+test <- read_delim("test.csv", delim = ";", 
+    escape_double = FALSE, trim_ws = TRUE)
+head(test)
+summary(test)
+```
+
+
+
+```{r}
+hist(train$weekly_demand)
+
+summary(train$weekly_demand)
+```
+
+
+
+```{r}
+barplot(table(train$category))
+```
+
+
+
+```{r}
+library(ggplot2)
+```
+
+
+
+```{r}
+ggplot(train,aes(x=category))+
+  geom_bar(fill="steelblue")+
+  theme_minimal()
+```
+
+
+
+```{r}
+ggplot(train, aes(x =num_week_iso, y = weekly_demand, group = ID)) +
+  geom_line(col="grey")+
+  stat_summary(aes(group = 1), geom = "line", fun = mean, size=2)
+```
+
+
+
+```{r}
+table(train$id_season)
+```
+
+
+
+
+
+```{r}
+library(dplyr)
+train2 <- train %>%
+  mutate(time = as.Date(paste(year, num_week_iso, 1, sep = "-"), "%Y-%U-%u"))
+
+
+ggplot(train2, aes(x = time, y = weekly_demand,group=ID)) +
+  geom_line(col="grey") +
+  stat_summary(aes(group = 1), geom = "line", fun = mean, size=2)+
+  labs(title = "Spaghetti plot weekly demand Mango (2023-2025)",
+       x = "Time",
+       y = "Weekly demand") +
+  theme_minimal()
+```
+
+
+```{r}
+ggplot(train2, aes(x = time, y = weekly_demand,group=ID)) +
+  #geom_line(col="grey") +
+  stat_summary(aes(group = 1), geom = "line", fun = mean, size=1,col="blue")+
+  labs(title = "Spaghetti plot weekly demand Mango (2023-2025)",
+       x = "Time",
+       y = "Weekly demand") +
+  theme_minimal()
+```
+
+
+
+```{r}
+p<- ggplot(train2, aes(x = time, y = weekly_demand, group = ID)) +
+  geom_line(col="grey") +
+  facet_wrap(~category)
+
+p + stat_summary(aes(group = 1),
+    geom = "line", fun = mean, size=2)
+```
+
+
+```{r}
+p<- ggplot(train2, aes(x = time, y = weekly_demand, group = ID)) +
+  #geom_line(col="green") +
+  facet_wrap(~category)
+
+p + stat_summary(aes(group = 1),
+    geom = "line", fun = mean, size=1)
+```
+
+```{r}
+mitjana_setmanal <- train2 %>%
+  group_by(time) %>%   # si 'date' ja és setmanal
+  summarise(mean_demand = mean(weekly_demand, na.rm = TRUE)) %>%
+  ungroup()
+
+# 2. Convertir-ho en sèrie temporal clàssica (ts)
+mitjana_ts <- ts(mitjana_setmanal$mean_demand,
+                 frequency = 52,   # 52 setmanes per any
+                 start = c(2023, 1))  # ajusta l'any inicial
+
+library(zoo)
+
+mitjana_ts <- zoo(mitjana_setmanal$mean_demand,
+                  mitjana_setmanal$time)
+plot(mitjana_ts, main = "Mitjana setmanal de demanda")
+
+```
+
+
+models
+
+arbre classificació
+
+```{r}
+library(tidyverse)
+library(caret)
+library(rpart)  # classification and regression trees 
+library(rpart.plot)  # better formatted plots than the ones in rpart
+
+resum<-skimr::skim(train)
+resum
+```
+
+Preprocessem les dades:
+
+
+```{r}
+colnames(train)
+train$ID<-as.integer(train$ID)
+train$image_embedding<-as.vector(train$image_embedding)
+test$ID<-as.integer(test$ID)
+
+train$id_season<-as.integer(train$id_season)
+test$id_season<-as.integer(test$id_season)
+test$image_embedding<-as.vector(test$image_embedding)
+
+
+```
+
+
+
+```{r}
+train$phase_in<- as.Date(train$phase_in, format = "%d/%m/%Y")
+train$phase_out <- as.Date(train$phase_out, format = "%d/%m/%Y")
+test$phase_in <- as.Date(test$phase_in, format = "%d/%m/%Y")
+test$phase_out <- as.Date(test$phase_out, format = "%d/%m/%Y")
+```
+
+
+```{r}
+train$color_rgb<-as.vector(train$color_rgb)
+test$color_rgb<-as.vector(test$color_rgb)
+```
+
+
+
+```{r}
+sapply(train,class)
+```
+
+
+```{r}
+library(dplyr)
+
+train <- train %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(across(where(is.logical), as.factor))
+  
+
+test <- test %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(across(where(is.logical), as.factor))
+  
+
+```
+
+
+
+```{r}
+sapply(train,class)
+```
+
+```{r}
+sapply(test,class)
+```
+
+
+A weekly demand imputem valors negatius per 0:
+
+```{r}
+train$weekly_demand[train$weekly_demand<0]<-0
+```
+
+
+####Imputació NA
+
+
+
+
+```{r}
+summary(train)
+```
+
+Imputem els NA de print type per sin estampado, el més freqüent:
+
+```{r}
+
+train$print_type[is.na(train$print_type)]<-"Sin Estampado"
+test$print_type[is.na(test$print_type)]<-"Sin Estampado"
+```
+
+
+
+imputem les variables que són 100% NA:
+
+```{r}
+train <- train %>%
+  select(-c(heel_shape_type, toecap_type))
+
+test <- test %>%
+  select(-c(heel_shape_type, toecap_type))
+```
+
+
+
+Eliminem archetype i knit structure, que tenen molts NA:
+
+```{r}
+train <- train %>%
+  select(-c(archetype,knit_structure))
+
+test <- test %>%
+  select(-c(archetype,knit_structure))
+```
+
+
+També waist type i neck label type tenen molts NA: les eliminem
+
+```{r}
+
+train <- train %>%
+  select(-c(waist_type,neck_lapel_type))
+
+test <- test %>%
+  select(-c(waist_type,neck_lapel_type))
+
+
+```
+
+
+Eliminem també woven structure, que té 1/3 de NA i no li trobo una possible imputació. També elimino sleeve_length type, que també en té 1/3.
+
+
+```{r}
+train <- train %>%
+  select(-c(woven_structure,sleeve_length_type))
+
+test <- test %>%
+  select(-c(woven_structure,sleeve_length_type))
+```
+
+
+Length type té 8 mil valors faltants. La imputem pel màxim: standard
+
+```{r}
+library(dplyr)
+
+train %>%
+  filter(is.na(length_type))
+```
+
+
+```{r}
+
+train$length_type[is.na(train$length_type)]<-"Standard"
+test$length_type[is.na(test$length_type)]<-"Standard"
+```
+
+
+Només queda mirar silhouette type, que només en té 5000. Mirem-ho:
+
+```{r}
+library(dplyr)
+
+train %>%
+  filter(is.na(silhouette_type))
+```
+
+
+Observem que passa el mateix que amb length type. Tornem a imputar pel valor més freqüent
+
+```{r}
+train$silhouette_type[is.na(train$silhouette_type)]<-"Straight"
+test$silhouette_type[is.na(test$silhouette_type)]<-"Straight"
+```
+
+
+```{r}
+summary(train)
+```
+
+
+
+
+```{r}
+summary(train)
+```
+
+```{r}
+summary(test)
+```
+
+
+Ja hem solucionat les dades faltants! Hem eliminat 8 variables i gairebé 14 mil casos del train i 500 del test. No és una gran pèrdua.
+
+
+Eliminem les variables que no estan al test:
+
+
+
+
+```{r}
+test<-test[,-(21:25)]
+```
+
+
+
+
+```{r}
+train<-train %>% select(-c(year,num_week_iso,weekly_sales,Production))
+```
+
+
+
+
+
+```{r}
+write.csv2(train,"train_prep.csv",row.names = FALSE)
+write.csv2(test,"test_prep.csv",row.names = FALSE)
+```
+
+
+
+
+
+```{r}
+#objeto_recipe <- objeto_recipe %>% step_BoxCox(all_numeric())
+```
+
+
+
+Models:
+
+```{r}
+library(caret)
+trControl = trainControl(
+   method = "cv",
+   number = 5,
+   savePredictions = "final" 
+)
+```
+
+
+
+
+```{r}
+mod1<-lm(weekly_demand~category+color_name+length_type+price,data=train)
+summary(mod1)
+```
+
+
+
+```{r}
+model_lineal<-train(weekly_demand~category+color_name+length_type+price, 
+                    data = train, 
+                    method = "glm", 
+                    family = gaussian, 
+                    trControl = trControl)
+
+```
+
+
+```{r}
+model_lineal$results
+model_lineal$pred
+```
+
+
+Ara farem un model amb totes les predictores excepte els vectors
+
+```{r}
+train<-train %>% select(-c(color_rgb,image_embedding))
+test<-test %>% select(-c(color_rgb,image_embedding))
+```
+
+
+
+
+```{r}
+summary(lm(weekly_demand~.,data=train))
+```
+
+```{r}
+model_lineal2<-train(weekly_demand~., 
+                    data = train, 
+                    method = "glm", 
+                    family = gaussian, 
+                    trControl = trControl)
+```
+
+
+
+```{r}
+model_lineal2$results
+```
+
+
+
+
+
+
+
+```{r}
+set.seed(1234)
+cart_full <- rpart(weekly_demand ~ ., train, method = "anova")
+cart_full
+```
+
+
+
+
+```{r}
+rpart.plot(cart_full, yesno = TRUE)
+```
+
+Importància variables:
+
+```{r}
+cart <- prune(
+   cart_full,
+   cp = cart_full$cptable[cart_full$cptable[, 2] == 5, "CP"]
+)
+rpart.plot(cart, yesno = TRUE)
+```
+
+
+```{r}
+cart$variable.importance %>% 
+   data.frame() %>%
+   rownames_to_column(var = "Feature") %>%
+   rename(Overall = '.') %>%
+   ggplot(aes(x = fct_reorder(Feature, Overall), y = Overall)) +
+   geom_pointrange(aes(ymin = 0, ymax = Overall), color = "cadetblue", size = .3) +
+   theme_minimal() +
+   coord_flip() +
+   labs(x = "", y = "", title = "Variable Importance with Simple Regression")
+```
+ La variable més important és el nombre de botigues.
+ 
+ 
+```{r}
+set.seed(1234)
+cart2 = train(
+   weekly_demand ~ ., 
+   data = train, 
+   method = "rpart",
+   tuneLength = 5,
+   metric = "RMSE",
+   trControl = trControl
+)
+```
+
+
+```{r}
+cart2$results
+cart2$pred
+```
+
+```{r}
+#pred_cart<- predict(cart2, newdata = test)
+```
+
+
+bagging arbres de regressió
+
+
+```{r}
+#set.seed(1234)
+#mdl_bag <- train(
+#   weekly_demand ~ ., 
+#   data = train, 
+#   method = "treebag",
+#   trControl = trControl
+#)
+#mdl_bag
+```
+
+
+
+```{r}
+#pred_bag<-predict(mdl_bag,newdata=test)
+```
+
